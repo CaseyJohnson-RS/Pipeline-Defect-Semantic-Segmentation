@@ -3,3 +3,4 @@ datasets/**
 venv/
 .env
 trash/
+!**/README.md
