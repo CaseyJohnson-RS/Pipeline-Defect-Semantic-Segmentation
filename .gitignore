@@ -1,3 +1,5 @@
 models/**
 datasets/**
 venv/
+.env
+trash/
