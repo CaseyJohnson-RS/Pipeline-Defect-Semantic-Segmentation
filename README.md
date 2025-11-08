@@ -47,7 +47,7 @@ venv\Scripts\activate.bat
 source venv/bin/activate
 ```
 
-**3. Обновляем pip
+**3. Обновляем pip**
 
 ```bash
 pip install --upgrade pip
