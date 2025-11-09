@@ -104,7 +104,7 @@ def train(model, CONFIG):
                         avg_val_dice = val_dice / len(val_loader)
 
                         tqdm.write(
-                            f"{CONFIG['val_dss'][val_i]['name']}\t"
+                            f"{CONFIG['val_dss'][val_i]['name']}   \t"
                             f"Val Loss: {avg_val_loss:.3f}\t"
                             f"IoU: {gradient_color(avg_val_iou, 0, 1)}\t"
                             f"Dice: {gradient_color(avg_val_dice, 0, 1)}"
