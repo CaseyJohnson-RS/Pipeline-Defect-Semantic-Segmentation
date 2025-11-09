@@ -11,6 +11,8 @@ load_dotenv()
 UNET_MODEL_PREFIX = os.getenv('UNET_MODEL_PREFIX')
 MODELS_DIRECTORY = Path(os.getenv('MODELS_DIRECTORY'))
 
+torch.serialization.add_safe_globals([Unet])
+
 
 def get_available_model_paths() -> list[Path]:
     """
@@ -82,8 +84,13 @@ def load_unet_model(
         model.to(device)
         
         # Load state dict
-        state_dict = torch.load(model_path, map_location=device)
-        model.load_state_dict(state_dict)
+        state_dict = torch.load(model_path, map_location=device, weights_only=False)
+
+        try:
+            model.load_state_dict(state_dict)
+        except TypeError:
+            model = state_dict
+        
         print("success!")
         
     else:

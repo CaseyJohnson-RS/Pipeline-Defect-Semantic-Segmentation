@@ -24,8 +24,12 @@ MODEL_ENCODER_WEIGHTS = 'imagenet'
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-PBSDS_DS_PATH = "datasets/PipeBoxSegmentation_augmented"
-PSDS_DS_PATH = "datasets/PipeSegmentation_augmented"
+PBSDS_DSA_PATH = "datasets/PipeBoxSegmentation_augmented"
+PSDS_DSA_PATH = "datasets/PipeSegmentation_augmented"
+PBSDS_DS_PATH = "datasets/PipeBoxSegmentation"
+PSDS_DS_PATH = "datasets/PipeSegmentation"
+
+
 
 MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
 EXPERIMENT_NAME = os.getenv('EXPERIMENT_NAME')
@@ -47,8 +51,8 @@ PBS_CRITETION = BackgroundSensitiveLoss
 # --- ЛУЧШЕ НЕ ТРОГАТЬ ---
 
 PBS_TRAIN_DATASET_PATH = {
-    'images': os.path.join(PBSDS_DS_PATH, 'images', 'train'), 
-    'masks': os.path.join(PBSDS_DS_PATH, 'masks', 'train'), 
+    'images': os.path.join(PBSDS_DSA_PATH, 'images', 'train'), 
+    'masks': os.path.join(PBSDS_DSA_PATH, 'masks', 'train'), 
 }
 
 PBS_VAL_DATASETS = [
@@ -69,17 +73,17 @@ PBS_VAL_DATASETS = [
 # Гиперпараметры обучения на датасете PS
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-PS_EPOCHS = 1
-PS_LEARNING_RATE = 1e-4
+PS_EPOCHS = 30
+PS_LEARNING_RATE = 1e-5
 PS_BATCH_SIZE = 4
 PS_OPTIMIZER = torch.optim.Adam
-PS_CRITETION = torch.nn.BCELoss
+PS_CRITETION = torch.nn.BCEWithLogitsLoss
 
 # --- ЛУЧШЕ НЕ ТРОГАТЬ ---
 
 PS_TRAIN_DATASET_PATH = {
-    'images': os.path.join(PSDS_DS_PATH, 'images', 'train'), 
-    'masks': os.path.join(PSDS_DS_PATH, 'masks', 'train'), 
+    'images': os.path.join(PSDS_DSA_PATH, 'images', 'train'), 
+    'masks': os.path.join(PSDS_DSA_PATH, 'masks', 'train'), 
 }
 
 
