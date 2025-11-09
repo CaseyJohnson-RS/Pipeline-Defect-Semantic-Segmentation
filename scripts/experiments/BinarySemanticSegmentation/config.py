@@ -42,7 +42,7 @@ VISUALIZATION_SAMPLES = 20
 # Гиперпараметры обучения на датасете PBS
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-PBS_EPOCHS = 5
+PBS_EPOCHS = 20
 PBS_LEARNING_RATE = 1e-4
 PBS_BATCH_SIZE = 4
 PBS_OPTIMIZER = torch.optim.Adam
