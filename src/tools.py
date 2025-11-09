@@ -17,6 +17,8 @@ def check_cuda_available():
     if torch.cuda.is_available():
         print("Имя GPU:", torch.cuda.get_device_name(0))
         print("Версия CUDA:", torch.version.cuda)
+        return True
+    return False
 
 
 def set_seed(SEED):
