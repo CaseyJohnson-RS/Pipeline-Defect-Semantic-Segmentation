@@ -96,6 +96,11 @@ def train(model, CONFIG):
                                 v_imgs, v_masks = v_imgs.to(CONFIG['device']), v_masks.to(CONFIG['device'])
                                 v_preds = model(v_imgs)
 
+                                # print(f"Images: {v_imgs.shape}, min={v_imgs.min():.3f}, max={v_imgs.max():.3f}")
+                                # print(f"Masks:  {v_masks.shape}, min={v_masks.min():.1f}, max={v_masks.max():.1f}")
+                                # print(f"Preds:  {v_preds.shape}, min={v_preds.min():.3f}, max={v_preds.max():.3f}")
+                                # break  # достаточно одного батча
+
                                 v_loss = criterion(v_preds, v_masks)
                                 val_loss += v_loss.item()
                                 val_iou += compute_iou(v_preds, v_masks)
@@ -118,7 +123,7 @@ def train(model, CONFIG):
                             f"{CONFIG['val_dss'][val_i]['name']} val_dice": avg_val_dice
                         }, step=epoch * len(train_loader) + steps)
                 
-                avg_train_loss = total_loss / len(train_loader)
+                avg_train_loss = total_loss / steps
                 progress_bar.set_postfix({"avg_train_loss": f"{avg_train_loss:.4f}"})
 
         print("Training completed!\n")

@@ -1,26 +1,21 @@
 import torch
-
+def _prepare_tensors(preds: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5):
+    """
+    Приводит логиты и маски к бинарным картам 0/1 для метрик.
+    """
+    preds = torch.sigmoid(preds)
+    preds = (preds > threshold).float()
+    targets = targets.float()  # уже 0/1
+    return preds, targets
 
 def compute_iou(preds: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5) -> float:
-    """
-    Вычисляет средний IoU для батча.
-    """
-    preds = torch.sigmoid(preds) if preds.min() < 0 or preds.max() > 1 else preds
-    preds = (preds > threshold).float()
-
+    preds, targets = _prepare_tensors(preds, targets, threshold)
     intersection = (preds * targets).sum(dim=(1, 2, 3))
     union = (preds + targets - preds * targets).sum(dim=(1, 2, 3))
-    iou = (intersection + 1e-6) / (union + 1e-6)
-    return iou.mean().item()
-
+    return ((intersection + 1e-6) / (union + 1e-6)).mean().item()
 
 def compute_dice(preds: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5) -> float:
-    """
-    Вычисляет средний Dice (F1) для батча.
-    """
-    preds = torch.sigmoid(preds) if preds.min() < 0 or preds.max() > 1 else preds
-    preds = (preds > threshold).float()
-
+    preds, targets = _prepare_tensors(preds, targets, threshold)
     intersection = (preds * targets).sum(dim=(1, 2, 3))
-    dice = (2 * intersection + 1e-6) / (preds.sum(dim=(1, 2, 3)) + targets.sum(dim=(1, 2, 3)) + 1e-6)
-    return dice.mean().item()
+    return ((2 * intersection + 1e-6) / 
+            (preds.sum(dim=(1, 2, 3)) + targets.sum(dim=(1, 2, 3)) + 1e-6)).mean().item()

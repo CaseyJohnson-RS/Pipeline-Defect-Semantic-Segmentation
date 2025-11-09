@@ -42,7 +42,7 @@ VISUALIZATION_SAMPLES = 20
 # Гиперпараметры обучения на датасете PBS
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-PBS_EPOCHS = 10
+PBS_EPOCHS = 5
 PBS_LEARNING_RATE = 1e-4
 PBS_BATCH_SIZE = 4
 PBS_OPTIMIZER = torch.optim.Adam
@@ -73,11 +73,11 @@ PBS_VAL_DATASETS = [
 # Гиперпараметры обучения на датасете PS
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-PS_EPOCHS = 30
-PS_LEARNING_RATE = 1e-5
-PS_BATCH_SIZE = 4
+PS_EPOCHS = 5
+PS_LEARNING_RATE = 1e-4
+PS_BATCH_SIZE = 2
 PS_OPTIMIZER = torch.optim.Adam
-PS_CRITETION = torch.nn.BCEWithLogitsLoss
+PS_CRITETION = BackgroundSensitiveLoss
 
 # --- ЛУЧШЕ НЕ ТРОГАТЬ ---
 
