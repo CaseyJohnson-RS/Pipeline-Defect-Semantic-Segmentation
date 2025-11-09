@@ -52,11 +52,11 @@ def save_model(model, model_name="model"):
     return save_path
 
 
-def check_dataset_dirs(dataset_pash: str) -> bool:
+def check_dataset_dirs(dataset_name: str) -> bool:
 
     for data_dir in ['images', 'masks']:
         for divide_dir in ['train', 'val']:
-            if not os.path.isdir(os.path.join(dataset_pash, data_dir, divide_dir)):
+            if not os.path.isdir(os.path.join('datasets', dataset_name, data_dir, divide_dir)):
                 return False
     return True 
 
