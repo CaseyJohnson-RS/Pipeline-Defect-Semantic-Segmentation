@@ -71,9 +71,11 @@ def train(model, CONFIG):
             # --- Train ---
             model.train()
             total_loss = 0.0
+            steps = 0
 
             progress_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]", leave=False)
             for imgs, masks in progress_bar:
+                steps += 1
                 imgs, masks = imgs.to(CONFIG['device']), masks.to(CONFIG['device'])
                 optimizer.zero_grad()
                 preds = model(imgs)
@@ -83,7 +85,7 @@ def train(model, CONFIG):
                 total_loss += loss.item()
 
                 # --- Валидация, да посреди эпохи, потому что эпохи долгие ---
-                if (progress_bar.n + 1) % val_steps == 0:
+                if steps % val_steps == 0:
                     model.eval()
                     progress_bar.set_postfix({'=': 'Evaluation=='})
 
@@ -114,7 +116,7 @@ def train(model, CONFIG):
                             f"{CONFIG['val_dss'][val_i]['name']} val_loss": avg_val_loss,
                             f"{CONFIG['val_dss'][val_i]['name']} val_iou": avg_val_iou,
                             f"{CONFIG['val_dss'][val_i]['name']} val_dice": avg_val_dice
-                        }, step=epoch * len(train_loader) + progress_bar.n + 1)
+                        }, step=epoch * len(train_loader) + steps)
                 
                 avg_train_loss = total_loss / len(train_loader)
                 progress_bar.set_postfix({"avg_train_loss": f"{avg_train_loss:.4f}"})
