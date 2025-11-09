@@ -5,14 +5,10 @@ import numpy as np
 import albumentations as A
 from tqdm import tqdm
 import torch
-import sys
+from src.tools import set_seed
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-print("Project root:", PROJECT_ROOT)
 
-def run_augmentation(dataset_name: str, n_aug: int = 3, seed: int = 42):
+def augmentation_segmentation_ds(dataset_name: str, n_aug: int = 3, seed: int = 42):
     """
     Выполняет аугментацию изображений и масок для указанного датасета.
     
@@ -25,12 +21,7 @@ def run_augmentation(dataset_name: str, n_aug: int = 3, seed: int = 42):
     # ==========================================================
     # Фиксируем все random seed'ы
     # ==========================================================
-    SEED = seed
-
-    random.seed(SEED)
-    np.random.seed(SEED)
-    torch.manual_seed(SEED)
-    torch.cuda.manual_seed_all(SEED)
+    set_seed(seed)
 
     # Для повторяемости при работе DataLoader/torch
     torch.backends.cudnn.deterministic = True
@@ -60,7 +51,7 @@ def run_augmentation(dataset_name: str, n_aug: int = 3, seed: int = 42):
     # ==========================================================
     transform = A.Compose([
         A.OneOf([
-            A.GaussNoise(var_limit=(10.0, 10.0), p=1.0),
+            A.GaussNoise(std_range=(0.01, 0.01,), p=1.0),
             A.ISONoise(p=1.0)
         ], p=0.5),
         A.Rotate(limit=10, p=0.7),
@@ -86,7 +77,7 @@ def run_augmentation(dataset_name: str, n_aug: int = 3, seed: int = 42):
 
         for i in range(n_aug):
             # Используем собственный seed для каждого augment'а
-            local_seed = SEED + i
+            local_seed = seed + i
             random.seed(local_seed)
             np.random.seed(local_seed)
 
@@ -123,8 +114,3 @@ def run_augmentation(dataset_name: str, n_aug: int = 3, seed: int = 42):
             )
 
     print(f"Аугментация завершена. Результаты сохранены в: {BASE_OUTPUT_DIR}")
-
-# Пример вызова функции
-if __name__ == "__main__":
-    # run_augmentation("PipeSegmentation", n_aug=3, seed=42)
-    run_augmentation("PipeBoxSegmentation", n_aug=3, seed=42)

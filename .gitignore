@@ -4,3 +4,6 @@ venv/
 .env
 trash/
 !**/README.md
+**/__pycache__/
+.vscode/
+.pytest_cache/

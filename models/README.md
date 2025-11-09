@@ -1,3 +1,3 @@
-## Description of models directory
+## Description
 
 This directory is intended for storing models.
