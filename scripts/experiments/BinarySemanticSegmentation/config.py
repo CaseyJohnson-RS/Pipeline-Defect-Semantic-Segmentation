@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 import os
 import torch
+from src.semantic_segmentation import BackgroundSensitiveLoss  # noqa: F401
 
 
 load_dotenv()
@@ -41,7 +42,7 @@ PBS_EPOCHS = 10
 PBS_LEARNING_RATE = 1e-4
 PBS_BATCH_SIZE = 4
 PBS_OPTIMIZER = torch.optim.Adam
-PBS_CRITETION = torch.nn.BCEWithLogitsLoss
+PBS_CRITETION = BackgroundSensitiveLoss
 
 # --- ЛУЧШЕ НЕ ТРОГАТЬ ---
 
@@ -70,9 +71,9 @@ PBS_VAL_DATASETS = [
 
 PS_EPOCHS = 1
 PS_LEARNING_RATE = 1e-4
-PS_BATCH_SIZE = 2
+PS_BATCH_SIZE = 4
 PS_OPTIMIZER = torch.optim.Adam
-PS_CRITETION = torch.nn.BCEWithLogitsLoss
+PS_CRITETION = torch.nn.BCELoss
 
 # --- ЛУЧШЕ НЕ ТРОГАТЬ ---
 
