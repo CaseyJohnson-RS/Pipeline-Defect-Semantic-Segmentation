@@ -1,6 +1,8 @@
+from dotenv import load_dotenv
 import mlflow
 from mlflow.models.signature import infer_signature
 import numpy as np
+import os
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -11,7 +13,10 @@ from src.tools import save_model, gradient_color, set_seed
 from rich.console import Console
 from datetime import datetime
 
+load_dotenv()
 console = Console()
+
+UNET_MODEL_PREFIX = os.getenv('UNET_MODEL_PREFIX')
 
 
 def train(model, CONFIG):
@@ -117,7 +122,7 @@ def train(model, CONFIG):
         print("Training completed!\n")
         
         # --- Save Model ---
-        save_model(model, f"unet_bss_dice{avg_val_dice:.3f}_iou{avg_val_iou:.3f}_{datetime.now().strftime('%m-%d_%H-%M')}")
+        save_model(model, f"{UNET_MODEL_PREFIX}{datetime.now().strftime('%m-%d_%H-%M')}")
 
         save_model_to_server = confirm("Save the model to the server (Y/n)? ", invalid_response_defaults_to_no=False)
         if save_model_to_server:
