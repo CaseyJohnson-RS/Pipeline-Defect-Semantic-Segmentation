@@ -8,7 +8,8 @@ print("Project root:", PROJECT_ROOT)
 
 
 from src.datasets import augmentation_segmentation_ds  # noqa: E402
-from src.tools import check_dataset_dirs # noqa: E402
+from src.tools import check_dataset_dirs, check_cuda_available # noqa: E402
+from src.console_input import confirm # noqa: E402
 
 
 if __name__ == "__main__":
@@ -17,6 +18,10 @@ if __name__ == "__main__":
         "PipeSegmentation",
         "PipeBoxSegmentation"
     ]
+
+    if not check_cuda_available():
+        if not confirm("GPU acceleration is not available. Do you want to continue?"):
+            sys.exit(0)
 
     for ds in datasets:
 
