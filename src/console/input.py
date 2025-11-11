@@ -1,3 +1,6 @@
+from .output import colored_text
+
+
 def select_option(
     options: list[str],
     prompt: str = "Select an option:",
@@ -42,7 +45,7 @@ def select_option(
                 if allow_empty:
                     return None
                 else:
-                    print("Please enter a value.")
+                    print(colored_text("Please enter a value.", 'red'))
                     continue
 
             # Check by number
@@ -57,13 +60,10 @@ def select_option(
                 # Return original from options (with correct case)
                 return options[normalized_options.index(search_value)]
 
-            print("Invalid input. Please try again.")
+            print(colored_text("Invalid input. Please try again.", 'red'))
 
-        except KeyboardInterrupt:
-            print("\nInput interrupted by user.")
-            raise
-        except (EOFError, ValueError):
-            print("Input error. Please try again.")
+        except Exception as _:
+            print(colored_text("Input error. Please try again.", 'red'))
 
 
 def confirm(
@@ -103,6 +103,23 @@ def confirm(
         if invalid_response_defaults_to_no:
             return False
 
+
+def input_with_default(
+    prompt: str,
+    default: str,
+) -> str:
+    """
+    Prompts user for input, returning a default value if input is empty.
+
+    Args:
+        prompt: Prompt text displayed before input.
+        default: Default value to return if input is empty.
+
+    Returns:
+        User input string, or default if input is empty.
+    """
+    user_input = input(f"{prompt} (default: {default}): ").strip()
+    return user_input if user_input else default
 
 if __name__ == "__main__":
     print(select_option(["apple", "banana", "cucumber"]))

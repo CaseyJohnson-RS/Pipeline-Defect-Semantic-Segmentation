@@ -1,0 +1,24 @@
+seed: 42
+
+epochs: 5
+learning_rate: 0.0001
+batch_size: 4
+criterion: 
+  name: WeightedCrossEntropyLoss
+  args:
+    background_weight: 0.99
+    object_weight: 1.0
+    reduction: mean
+
+dataset: PipeBoxSegmentation
+image_size: [704, 512]
+model:
+  name: UNet
+  args:
+    encoder_name: mobilenet_v2
+    encoder_weights: imagenet
+    in_channels: 3
+    classes: 1
+
+val_per_epoch: 10
+visualization_samples: 20

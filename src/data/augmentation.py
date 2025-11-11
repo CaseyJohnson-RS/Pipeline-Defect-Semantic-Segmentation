@@ -5,7 +5,7 @@ import numpy as np
 import albumentations as A
 from tqdm import tqdm
 import torch
-from src.tools import set_seed
+from src import set_seed
 
 
 def augmentation_segmentation_ds(dataset_name: str, n_aug: int = 3, seed: int = 42):

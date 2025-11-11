@@ -8,27 +8,10 @@
 
 ## О задаче
 
-  
 
-Необходимо перейти от задачи детекции объектов к задаче семантической сегментации. Оригинальный датасет размеченный для задачи детекции находится по [ссылке](https://www.kaggle.com/datasets/simplexitypipeline/pipeline-defect-dataset). Было решено соорудить монстра из двух моделей.
+Необходимо перейти от задачи детекции объектов к задаче семантической сегментации. Оригинальный датасет размеченный для задачи детекции находится по [ссылке](https://www.kaggle.com/datasets/simplexitypipeline/pipeline-defect-dataset).
 
-  
 
-1. Модель UNet для семантической сегментации фона
-
-2. Обученная для задачи детекции модель YOLO
-
-  
-
-Для обучения модели UNet были созданы два датасета:
-
- - [Pipline Defect Box Semantic Segmentation](https://www.kaggle.com/datasets/caseyjohnsonrs/pipe-defect-box-semantic-segmentation/data). Семантические маски этого датасета были созданы как простые заливки боксов для задачи детекции белым цветом.
-
- - [Pipeline Defect Semantic Segmentation](https://www.kaggle.com/datasets/caseyjohnsonrs/pipeline-defects-semantic-segmentation/data). Семантические маски размечались в ручную, но в небольшом количестве.
-
-  
-  
-  
 
 ## Инструкция настройки проекта
 
@@ -45,7 +28,6 @@
 Это окружение, под которым разрабатывался проект.
 Установка CUDA не является обязательным шагом, но без него всё обучение будет проходить медленно.
 
-  
   
 
 **1. Создаём виртуальное окружение**
@@ -146,17 +128,15 @@ nvcc --version
 
   
 
-**6. Скачиваем два датасета**
+**6. Скачиваем датасет**
 
   
 
-[Первый датасет](https://www.kaggle.com/datasets/caseyjohnsonrs/pipe-defect-box-semantic-segmentation/data) - создан из боксов разметки для задачи детекции.
-
-[Второй датасет](https://www.kaggle.com/datasets/caseyjohnsonrs/pipeline-defects-semantic-segmentation/data) - создан ручками.
+[Датасет](https://www.kaggle.com/datasets/caseyjohnsonrs/pipe-defect-box-semantic-segmentation/data) - создан из боксов разметки для задачи детекции.
 
   
 
-Распаковываем к папку `datasets/` так, чтобы получилась следующая структура:
+Распаковываем в директорию `datasets/` так, чтобы получилась следующая структура:
 
   
 
@@ -164,13 +144,6 @@ nvcc --version
 
 datasets/
 |-- PipeBoxSegmentation/
-|   |-- images/
-|   |   |-- train/
-|   |   |-- val/
-|   |-- masks/
-|   |   |-- train/
-|   |   |-- val/
-|-- PipeSegmentation/
 |   |-- images/
 |   |   |-- train/
 |   |   |-- val/
@@ -186,19 +159,7 @@ datasets/
 
   
 
-**7. Запускаем аугментацию**
-
-  
-
-Так как хранить на сервере аугментированные данные глупо, мы будем аугментировать их у себя локально. Необходимо запустить скрипт `scripts/tools/augment_segmentation_datasets.py`.
-
-  
-
-У вас в папке `datasets/` появится еще две директории.
-
-  
-
-**8. Создаём переменные окружения**
+**7. Создаём переменные окружения**
 
   
 
@@ -207,16 +168,18 @@ datasets/
 
 ```bash
 
-MLFLOW_TRACKING_URI=http://111.111.111.111:5001
+MLFLOW_TRACKING_URI=http://111.111.111.11:1111
 EXPERIMENT_NAME = "Pipeline Defects Detection"
-MODELS_DIRECTORY = 'models'
+MODELS_DIR = 'models'
+DATASETS_DIR = 'datasets'
 UNET_MODEL_PREFIX = "unet_bss_"
+USERNAME="Casey"
 
 ```
 
   
 
-**9. Проверяем, что всё работает**
+**8. Проверяем, что всё работает**
 
 Запускаем минимальный скрипт `scripts/tools/health_check.py`. Естественно, правильно ли вы настроили окружение полностью выяснится, когда перейдёте к экспериментам.
 
