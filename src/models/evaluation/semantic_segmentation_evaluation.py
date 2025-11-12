@@ -26,7 +26,7 @@ def semantic_segmentation_evaluation(model, val_loader, criterion, device, log=F
             total_iou += compute_iou(outputs, masks)
             total_dice += compute_dice(outputs, masks)
             total_recall += compute_tpr(outputs, masks)
-            total_specificity ++ compute_tnr(outputs, masks)
+            total_specificity += compute_tnr(outputs, masks)
             total_loss += criterion(outputs, masks).item()
             
             val_loader.set_postfix({'loss': total_loss / steps })

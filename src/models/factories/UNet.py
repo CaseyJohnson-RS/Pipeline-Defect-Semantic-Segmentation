@@ -56,7 +56,7 @@ def load_unet(
     available_models = get_available_model_paths()
 
     # Ask user whether to load existing model
-    should_load_existing = confirm("Load existing model (default = No)? ")
+    should_load_existing = confirm("Load existing model (default: No)? ")
 
     if should_load_existing and available_models:
         # Let user select from available models

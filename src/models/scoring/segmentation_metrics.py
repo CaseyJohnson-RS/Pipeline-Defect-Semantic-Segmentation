@@ -134,9 +134,10 @@ def compute_tnr(
     """
     binary_preds, binary_targets = _prepare_binary_masks(preds, targets, threshold)
 
-
     tn = ((1 - binary_preds) * (1 - binary_targets)).sum(dim=(1, 2, 3))  # True Negatives
     fp = (binary_preds * (1 - binary_targets)).sum(dim=(1, 2, 3))  # False Positives
 
     tnr = (tn + eps) / (tn + fp + eps)  # TNR = TN / (TN + FP)
-    return tnr.mean().item()
+
+    return float(tnr.mean().cpu().numpy())
+
