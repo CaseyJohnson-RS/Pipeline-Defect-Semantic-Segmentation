@@ -104,7 +104,7 @@ def train(
         model.train()
         cum_loss = 0.0
 
-        tqdm_train_loader = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]", leave=False)
+        tqdm_train_loader = tqdm(train_loader, desc=f"Train [{epoch+1}/{epochs}]", leave=False)
 
         step = 0
         val_every_steps = max(1, len(train_loader) // val_per_epoch)
@@ -128,7 +128,7 @@ def train(
             if step % val_every_steps == 0 and val_loader is not None and val_function is not None and val_per_epoch > 0:
                 model.eval()
 
-                val_dict = val_function(model, val_loader, criterion, device, log=True)
+                val_dict = val_function(model, val_loader, criterion, device, log=True, prefix="Validation", colour="#8600bf")
 
                 tqdm.write("Validation\t" + val_dict['console_log'])
                 

@@ -91,15 +91,20 @@ print(colored_text("\nConfirmed", "green"))
 
 set_seed(EXPCFG["seed"])
 
-with console.status("Loading dataset..."):
+with console.status("Loading datasets..."):
     train_ds = SegmentationDataset(
-        os.path.join(DATASETS_DIR, EXPCFG["dataset"], "images", "train"),
-        os.path.join(DATASETS_DIR, EXPCFG["dataset"], "masks", "train"),
+        os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "images", "train"),
+        os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "masks", "train"),
         EXPCFG["image_size"],
     )
     val_ds = SegmentationDataset(
-        os.path.join(DATASETS_DIR, EXPCFG["dataset"], "images", "val"),
-        os.path.join(DATASETS_DIR, EXPCFG["dataset"], "masks", "val"),
+        os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "images", "val"),
+        os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "masks", "val"),
+        EXPCFG["image_size"],
+    )
+    eval_ds = SegmentationDataset(
+        os.path.join(DATASETS_DIR, EXPCFG["evaluation_dataset"], "images"),
+        os.path.join(DATASETS_DIR, EXPCFG["evaluation_dataset"], "masks"),
         EXPCFG["image_size"],
     )
     train_loader = torch.utils.data.DataLoader(
@@ -116,7 +121,15 @@ with console.status("Loading dataset..."):
         num_workers=0,
         pin_memory=True,
     )
-print(colored_text(f"Dataset loaded. Train: {len(train_loader)}, Validation: {len(val_loader)}", "green"))
+    eval_loader = torch.utils.data.DataLoader(
+        eval_ds,
+        batch_size=EXPCFG["batch_size"],
+        shuffle=False,
+        num_workers=0,
+        pin_memory=True,
+    )
+
+print(colored_text(f"Dataset loaded. Train: {len(train_loader)}, Validation: {len(val_loader)}, Evaluation {len(eval_loader)}", "green"))
 
 # Инициализация оптимизатора и функции потерь
 optimizer = torch.optim.Adam(
@@ -148,6 +161,23 @@ with mlflow.start_run(run_name=run_name):
 
     print(colored_text("Training completed!\n", "green"))
 
+    results = semantic_segmentation_evaluation(
+        trained_model,
+        val_loader=eval_loader,
+        criterion=criterion,
+        device=EXPCFG["device"],
+        log=True,
+        prefix="Evaluation",
+        colour="#00afc9",
+    )
+
+    print(colored_text("\nEvaluation results:", "green"))
+    print(results["console_log"])
+
+    mlflow.log_metrics(
+        {f"Evaluation {k}": v for k, v in results['metrics'].items()}
+    )
+
     # Визуализируем предсказания
     make_viz = confirm("Make visualizations (Y/n)? ", invalid_response_defaults_to_no=False)
     if make_viz:
@@ -157,7 +187,7 @@ with mlflow.start_run(run_name=run_name):
 
             visualize_predictions(
                 trained_model,
-                val_ds,
+                eval_ds,
                 EXPCFG["device"],
                 save_path=vis_path,
                 num_samples=EXPCFG["visualization_samples"],
@@ -177,6 +207,6 @@ with mlflow.start_run(run_name=run_name):
     
     save_model_local = confirm("Save the model locally (Y/n)? ", invalid_response_defaults_to_no=False)
     if save_model_local:
-        save_model(trained_model, f"{UNET_MODEL_PREFIX}{EXPCFG['dataset']}_{run_name.replace(' ', '_')}")
+        save_model(trained_model, f"{UNET_MODEL_PREFIX}{EXPCFG['train_dataset']}_{run_name.replace(' ', '_')}")
         print(colored_text("Model saved locally!", "green"))
     
