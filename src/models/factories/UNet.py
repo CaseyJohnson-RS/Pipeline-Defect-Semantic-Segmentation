@@ -59,6 +59,11 @@ def load_unet(
     should_load_existing = confirm("Load existing model (default: No)? ")
 
     if should_load_existing and available_models:
+
+        if len(available_models) == 0:
+            print(colored_text("No available models found.", "red"))
+            raise FileNotFoundError("No available models to load.")
+
         # Let user select from available models
         model_names = [model_path.name for model_path in available_models]
         selected_name = select_option(model_names, "Select a model: ")
