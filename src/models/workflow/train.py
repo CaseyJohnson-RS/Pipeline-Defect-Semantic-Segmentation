@@ -139,7 +139,7 @@ def train(
             
             global pause
             if pause:
-                print(colored_text("Training paused.", "yellow"))
+                print(colored_text("\nTraining paused.", "yellow"))
                 selected_option = select_option([
                     'Continue',
                     'Save model checkpoint',
