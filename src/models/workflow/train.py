@@ -38,13 +38,12 @@ def save_model_checkpoint(model):
     if train_start_time is None:
         raise ValueError("Train didn't start yet!")
 
-    # Получаем базовый путь из переменной окружения
-    base_dir = os.getenv("MODELS_DIR")
+    global MODELS_DIR
 
     # Формируем имя корневой директории на основе train_start_time
     # Формат: YYYYMMDD_HHMMSS (например, 20251112_103000)
     timestamp_str = train_start_time.strftime("%Y%m%d_%H%M%S")
-    root_dir = os.path.join(base_dir, timestamp_str)
+    root_dir = os.path.join(MODELS_DIR, timestamp_str)
 
     # Создаём корневую директорию, если её нет
     os.makedirs(root_dir, exist_ok=True)
