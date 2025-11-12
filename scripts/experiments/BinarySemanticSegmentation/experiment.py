@@ -149,20 +149,22 @@ with mlflow.start_run(run_name=run_name):
     print(colored_text("Training completed!\n", "green"))
 
     # Визуализируем предсказания
-    with console.status("Making visualizations..."):
-        vis_path = "predictions.png"
-        from src.models.workflow.visualizations import visualize_predictions
+    make_viz = confirm("Make visualizations (Y/n)? ", invalid_response_defaults_to_no=False)
+    if make_viz:
+        with console.status("Making visualizations..."):
+            vis_path = "predictions.png"
+            from src.models.workflow.visualizations import visualize_predictions
 
-        visualize_predictions(
-            trained_model,
-            val_ds,
-            EXPCFG["device"],
-            save_path=vis_path,
-            num_samples=EXPCFG["visualization_samples"],
-        )
-    with console.status("Saving visualizations (5-15 sec)..."):
-        mlflow.log_artifact(vis_path)
-    print(colored_text("Visualization saved on cloud!\n", "green"))
+            visualize_predictions(
+                trained_model,
+                val_ds,
+                EXPCFG["device"],
+                save_path=vis_path,
+                num_samples=EXPCFG["visualization_samples"],
+            )
+        with console.status("Saving visualizations (5-15 sec)..."):
+            mlflow.log_artifact(vis_path)
+        print(colored_text("Visualization saved on cloud!\n", "green"))
 
     # Отправка модели на сервер и/или сохранение локально
     save_model_to_server = confirm("Save the model to the server (Y/n)? ", invalid_response_defaults_to_no=False)
@@ -173,7 +175,7 @@ with mlflow.start_run(run_name=run_name):
             mlflow.pytorch.log_model(trained_model, name="UNetBimarySemanticSegmentation", signature=signature)
         print(colored_text("Model saved on cloud!", "green"))
     
-    save_model_local = confirm("Save the model locally (default: Yes)? ", default_yes=True)
+    save_model_local = confirm("Save the model locally (Y/n)? ", invalid_response_defaults_to_no=False)
     if save_model_local:
         save_model(trained_model, f"{UNET_MODEL_PREFIX}{EXPCFG['dataset']}_{run_name.replace(' ', '_')}")
         print(colored_text("Model saved locally!", "green"))
