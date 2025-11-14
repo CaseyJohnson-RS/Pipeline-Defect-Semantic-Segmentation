@@ -7,11 +7,11 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 # Пути
-images_train = r'datasets/PipeSegmentation/images/train'
-masks_train = r'datasets/PipeSegmentation/masks/train'
+images_train = r'datasets/Deformation/images/train'
+masks_train = r'datasets/Deformation/masks/train'
 
-images_val = r'datasets/PipeSegmentation/images/val'
-masks_val = r'datasets/PipeSegmentation/masks/val'
+images_val = r'datasets/Deformation/images/val'
+masks_val = r'datasets/Deformation/masks/val'
 
 # Создаём папки для валидации, если их нет
 os.makedirs(images_val, exist_ok=True)

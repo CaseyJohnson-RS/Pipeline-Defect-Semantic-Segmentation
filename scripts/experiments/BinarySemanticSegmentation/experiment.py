@@ -71,6 +71,7 @@ print(colored_text("Connected to MLFLow server!", "green"))
 
 # Загрузка модели
 model = load_unet(**EXPCFG["model"]["args"]).to(EXPCFG["device"])
+EXPCFG["model"]["encoder_name"] = model.encoder.__class__.__name__
 
 # Задаём имя запуска
 run_name = input_with_default(
@@ -92,19 +93,10 @@ print(colored_text("\nConfirmed", "green"))
 set_seed(EXPCFG["seed"])
 
 with console.status("Loading datasets..."):
+    print(os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "images", "train"))
     train_ds = SegmentationDataset(
         os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "images", "train"),
         os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "masks", "train"),
-        EXPCFG["image_size"],
-    )
-    val_ds = SegmentationDataset(
-        os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "images", "val"),
-        os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "masks", "val"),
-        EXPCFG["image_size"],
-    )
-    eval_ds = SegmentationDataset(
-        os.path.join(DATASETS_DIR, EXPCFG["evaluation_dataset"], "images"),
-        os.path.join(DATASETS_DIR, EXPCFG["evaluation_dataset"], "masks"),
         EXPCFG["image_size"],
     )
     train_loader = torch.utils.data.DataLoader(
@@ -114,6 +106,12 @@ with console.status("Loading datasets..."):
         num_workers=0,
         pin_memory=True,
     )
+
+    val_ds = SegmentationDataset(
+        os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "images", "val"),
+        os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "masks", "val"),
+        EXPCFG["image_size"],
+    )
     val_loader = torch.utils.data.DataLoader(
         val_ds,
         batch_size=EXPCFG["batch_size"],
@@ -121,15 +119,25 @@ with console.status("Loading datasets..."):
         num_workers=0,
         pin_memory=True,
     )
-    eval_loader = torch.utils.data.DataLoader(
-        eval_ds,
-        batch_size=EXPCFG["batch_size"],
-        shuffle=False,
-        num_workers=0,
-        pin_memory=True,
-    )
 
-print(colored_text(f"Dataset loaded. Train: {len(train_loader)}, Validation: {len(val_loader)}, Evaluation {len(eval_loader)}", "green"))
+    if EXPCFG['evaluation_dataset'] and len(EXPCFG['evaluation_dataset']) > 0:
+        eval_ds = SegmentationDataset(
+            os.path.join(DATASETS_DIR, EXPCFG["evaluation_dataset"], "images"),
+            os.path.join(DATASETS_DIR, EXPCFG["evaluation_dataset"], "masks"),
+            EXPCFG["image_size"],
+        )
+        eval_loader = torch.utils.data.DataLoader(
+            eval_ds,
+            batch_size=EXPCFG["batch_size"],
+            shuffle=True,
+            num_workers=0,
+            pin_memory=True,
+        )
+    else:
+        eval_ds = None
+        eval_loader = None
+
+print(colored_text(f"Dataset loaded. Train: {len(train_loader)}, Validation: {len(val_loader)}, Evaluation {len(eval_loader) if eval_loader else 'None'}", "green"))
 
 # Инициализация оптимизатора и функции потерь
 optimizer = torch.optim.Adam(
@@ -161,22 +169,23 @@ with mlflow.start_run(run_name=run_name):
 
     print(colored_text("Training completed!\n", "green"))
 
-    results = semantic_segmentation_evaluation(
-        trained_model,
-        val_loader=eval_loader,
-        criterion=criterion,
-        device=EXPCFG["device"],
-        log=True,
-        prefix="Evaluation",
-        colour="#00afc9",
-    )
+    if eval_loader:
+        results = semantic_segmentation_evaluation(
+            trained_model,
+            val_loader=eval_loader,
+            criterion=criterion,
+            device=EXPCFG["device"],
+            log=True,
+            prefix="Evaluation",
+            colour="#00afc9",
+        )
 
-    print(colored_text("\nEvaluation results:", "green"))
-    print(results["console_log"])
+        print(colored_text("\nEvaluation results:", "green"))
+        print(results["console_log"])
 
-    mlflow.log_metrics(
-        {f"Evaluation {k}": v for k, v in results['metrics'].items()}
-    )
+        mlflow.log_metrics(
+            {f"Evaluation {k}": v for k, v in results['metrics'].items()}
+        )
 
     # Визуализируем предсказания
     make_viz = confirm("Make visualizations (Y/n)? ", invalid_response_defaults_to_no=False)
@@ -187,7 +196,7 @@ with mlflow.start_run(run_name=run_name):
 
             visualize_predictions(
                 trained_model,
-                eval_ds,
+                eval_ds if eval_ds else val_ds,
                 EXPCFG["device"],
                 save_path=vis_path,
                 num_samples=EXPCFG["visualization_samples"],

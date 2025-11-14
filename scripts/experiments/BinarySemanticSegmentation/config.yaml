@@ -1,17 +1,17 @@
-seed: 42
+seed: 43
 
-epochs: 1
+epochs: 10
 learning_rate: 0.0001
-batch_size: 4
+batch_size: 2
 criterion: 
   name: WeightedCrossEntropyLoss
   args:
-    background_weight: 0.99
-    object_weight: 1.0
+    background_weight: 0.2
+    object_weight: 1
     reduction: mean
 
-train_dataset: PipeSegmentation_auto_labeled_v0
-evaluation_dataset: PipeSegmentation_hand_labeled
+train_dataset: Deformation_v1_augmented
+evaluation_dataset:
 image_size: [704, 512]
 model:
   name: UNet
@@ -22,4 +22,4 @@ model:
     classes: 1
 
 val_per_epoch: 10
-visualization_samples: 20
+visualization_samples: 30

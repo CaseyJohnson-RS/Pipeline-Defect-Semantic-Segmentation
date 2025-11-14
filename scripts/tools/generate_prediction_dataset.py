@@ -1,114 +1,101 @@
 import os
 import sys
+import cv2
 import torch
-from torchvision import transforms
-from torchvision.io import read_image
-from PIL import Image
-from tqdm import tqdm
-
-# === НАСТРОЙКИ ===
-
+import numpy as np
+from pathlib import Path
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Путь к исходному датасету
-SOURCE_DATASET = "datasets/PipeBoxSegmentation"
-MODEL_PATH = "models/unet_bss_v1.pth"
-OUTPUT_DATASET = "datasets/PipeSegmentation_v0"
-
-THRESHOLD = 0.425
-MIN_PERCENT_INSIDE_MASK = 0.5  # если меньше этого процента, порог понижается циклически
-THRESHOLD_STEP = 0.02          # шаг уменьшения порога
-MIN_THRESHOLD = 0.05           # нижний предел порога, чтобы не уйти в ноль
-
-
-# === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
-
-def load_model(path: str):
-    """Загружает модель семантической сегментации"""
-    model = torch.load(path, map_location=DEVICE, weights_only=False)
+def load_segmentation_model(model_path: str):
+    model = torch.load(model_path, map_location="cpu", weights_only=False)
     model.eval()
     return model
 
+def load_yolo_boxes(label_path: str, img_w: int, img_h: int, target_class: int):
+    boxes = []
+    if not os.path.exists(label_path):
+        return boxes
+    with open(label_path, "r") as f:
+        for line in f:
+            cls_id, x, y, w, h = map(float, line.split())
+            if int(cls_id) != target_class:
+                continue
+            bx = int((x - w / 2) * img_w)
+            by = int((y - h / 2) * img_h)
+            bw = int(w * img_w)
+            bh = int(h * img_h)
+            boxes.append([bx, by, bx + bw, by + bh])
+    return boxes
 
-def prepare_dirs():
-    """Создает выходные папки"""
-    for split in ["train", "val"]:
-        os.makedirs(f"{OUTPUT_DATASET}/images/{split}", exist_ok=True)
-        os.makedirs(f"{OUTPUT_DATASET}/masks/{split}", exist_ok=True)
+def box_to_mask(box, shape):
+    mask = np.zeros(shape, dtype=np.uint8)
+    x1, y1, x2, y2 = box
+    mask[y1:y2, x1:x2] = 255
+    return mask
 
-
-def predict_mask(model, image_path, threshold=THRESHOLD):
-    """Делает предсказание маски для одного изображения"""
-    image = Image.open(image_path).convert("RGB")
-    transform = transforms.ToTensor()
-    tensor = transform(image).unsqueeze(0).to(DEVICE)
-
+def predict_mask(model, image):
+    # Пример для модели, отдающей бинарную маску через сигмоиду
     with torch.no_grad():
-        logits = model(tensor)
-        probs = torch.sigmoid(logits)
-        binary_mask = (probs > threshold).float()
+        inp = torch.from_numpy(image.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
+        pred = (model(inp)[0].sigmoid().squeeze().cpu().numpy() > 0.45).astype(np.uint8) * 255
+    return pred
 
-    # убираем batch и channel, оставляем HxW
-    return binary_mask.squeeze().cpu(), image
+def process_dataset(
+        model_path: str,
+        dataset_path: str,
+        yolo_labels_path: str,
+        output_path: str,
+        split: str = "train",
+        target_class: int = 0,
+        overlap_threshold: float = 0.5
+):
+    os.makedirs(f"{output_path}/images/{split}", exist_ok=True)
+    os.makedirs(f"{output_path}/masks/{split}", exist_ok=True)
 
+    model = load_segmentation_model(model_path)
 
-def process_split(model, split):
-    """Обрабатывает train/val"""
-    img_dir = os.path.join(SOURCE_DATASET, "images", split)
-    mask_dir = os.path.join(SOURCE_DATASET, "masks", split)
+    img_dir = Path(dataset_path) / "images" / split
+    for img_file in img_dir.glob("*.jpg"):
+        image = cv2.imread(str(img_file))
+        h, w = image.shape[:2]
 
-    if not os.path.exists(img_dir) or not os.path.exists(mask_dir):
-        print(f"Пропускаю {split}: не найдены {img_dir} или {mask_dir}")
-        return
+        pred_mask = predict_mask(model, image)
 
-    image_files = sorted(os.listdir(img_dir))
-    for img_name in tqdm(image_files, desc=f"Processing {split}"):
-        img_path = os.path.join(img_dir, img_name)
-        base_name, _ = os.path.splitext(img_name)
-        mask_name = f"{base_name}_mask.png"
-        mask_path = os.path.join(mask_dir, mask_name)
+        label_file = Path(yolo_labels_path) / f"{img_file.stem}.txt"
+        boxes = load_yolo_boxes(str(label_file), w, h, target_class)
 
-        if not os.path.exists(mask_path):
-            print(f"⚠️ Warning: mask not found for {img_name} → ожидается {mask_name}")
-            continue
+        final_mask = np.zeros((h, w), dtype=np.uint8)
 
-        # Загружаем исходную маску (0 — фон, 255 — объект)
-        target_mask = read_image(mask_path)[0].float() / 255.0
+        for box in boxes:
+            box_mask = box_to_mask(box, (h, w))
 
-        # Делаем предсказание
-        threshold = THRESHOLD
-        pred_mask, image = predict_mask(model, img_path, threshold)
-        pred_mask = pred_mask * target_mask
+            intersection = cv2.bitwise_and(pred_mask, box_mask)
+            inter_area = np.count_nonzero(intersection)
+            box_area = np.count_nonzero(box_mask)
+            overlap = inter_area / box_area if box_area > 0 else 0
 
-        inside_percent = (pred_mask.sum() / (target_mask.sum() + 1e-6)).item()
+            if overlap < overlap_threshold:
+                final_mask = cv2.bitwise_or(final_mask, box_mask)
+            else:
+                final_mask = cv2.bitwise_or(final_mask, intersection)
 
-        # Понижаем порог, если процент меньше MIN_PERCENT_INSIDE_MASK
-        while inside_percent < MIN_PERCENT_INSIDE_MASK and threshold > MIN_THRESHOLD:
-            threshold = max(threshold - THRESHOLD_STEP, MIN_THRESHOLD)
-            pred_mask, _ = predict_mask(model, img_path, threshold)
-            pred_mask = pred_mask * target_mask
-            inside_percent = (pred_mask.sum() / (target_mask.sum() + 1e-6)).item()
+        out_img = f"{output_path}/images/{split}/{img_file.name}"
+        out_mask = f"{output_path}/masks/{split}/{img_file.stem}.png"
 
-        # Сохраняем результат
-        image.save(f"{OUTPUT_DATASET}/images/{split}/{img_name}")
-        pred_img = Image.fromarray((pred_mask.numpy() * 255).astype("uint8"))
-        pred_img.save(f"{OUTPUT_DATASET}/masks/{split}/{mask_name}")
+        cv2.imwrite(out_img, image)
+        cv2.imwrite(out_mask, final_mask)
 
+        print(f"Processed {img_file.name}")
 
-def main():
-    print(f"Использую исходный датасет: {os.path.abspath(SOURCE_DATASET)}")
-    model = load_model(MODEL_PATH)
-    prepare_dirs()
-
-    for split in ["train", "val"]:
-        process_split(model, split)
-
-    print("✅ Готово: новые датасеты сохранены.")
-
-
-if __name__ == "__main__":
-    main()
+# Пример вызова:
+process_dataset(
+    model_path="models/unet_bss_Deformation_augmented_Test_Loss_Params_1x3.pth",
+    dataset_path="datasets/Deformation",
+    yolo_labels_path="datasets/tmp",
+    output_path="datasets/Deformation_v1",
+    split="val",
+    target_class=0,
+    overlap_threshold=0.4
+)

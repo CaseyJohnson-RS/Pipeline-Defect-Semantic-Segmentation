@@ -7,16 +7,16 @@ if PROJECT_ROOT not in sys.path:
 print("Project root:", PROJECT_ROOT)
 
 
-from src.datasets import augmentation_segmentation_ds  # noqa: E402
-from src.tools import check_dataset_dirs, check_cuda_available # noqa: E402
-from src.console_input import confirm # noqa: E402
+from src.data import augmentation_segmentation_ds, check_dataset_dirs  # noqa: E402
+from src import check_cuda_available # noqa: E402
+from src.console import confirm # noqa: E402
 
 
 if __name__ == "__main__":
     
     datasets = [
-        "PipeSegmentation",
-        "PipeBoxSegmentation"
+        "Deformation_v1",
+        # "PipeBoxSegmentation"
     ]
 
     if not check_cuda_available():

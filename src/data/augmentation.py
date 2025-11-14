@@ -101,16 +101,32 @@ def augmentation_segmentation_ds(dataset_name: str, n_aug: int = 3, seed: int = 
             mask_file = os.path.splitext(img_file)[0] + "_mask.png"
             mask_path = os.path.join(MASK_DIRS[split], mask_file)
 
-            if not os.path.exists(mask_path):
-                print(f"⚠️ Маска не найдена: {mask_path}")
+            if os.path.exists(mask_path):
+                augment_and_save(
+                    image_path,
+                    mask_path,
+                    OUTPUT_IMAGE_DIRS[split],
+                    OUTPUT_MASK_DIRS[split],
+                    img_file
+                )
                 continue
+            
+            # mask_file = os.path.splitext(img_file)[0] + "_mask.jpg"
+            # mask_path = os.path.join(MASK_DIRS[split], mask_file)
 
-            augment_and_save(
-                image_path,
-                mask_path,
-                OUTPUT_IMAGE_DIRS[split],
-                OUTPUT_MASK_DIRS[split],
-                img_file
-            )
+            # if os.path.exists(mask_path):
+            #     augment_and_save(
+            #         image_path,
+            #         mask_path,
+            #         OUTPUT_IMAGE_DIRS[split],
+            #         OUTPUT_MASK_DIRS[split],
+            #         img_file
+            #     )
+            #     continue
+            
+            print(f"⚠️ Маска не найдена: {mask_path}")
+
+
+            
 
     print(f"Аугментация завершена. Результаты сохранены в: {BASE_OUTPUT_DIR}")
