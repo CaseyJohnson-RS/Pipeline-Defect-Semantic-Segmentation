@@ -27,8 +27,9 @@ import torch  # noqa: E402
 import yaml  # noqa: E402
 from src import load_yaml_file, set_seed  # noqa: E402
 from src.console import confirm, input_with_default, colored_text  # noqa: E402
-from src.models.factories import load_unet  # noqa: E402
-from src.models.losses import WeightedCrossEntropyLoss  # noqa: E402
+from src.models.factories import load_unet, load_unet_attention # noqa: E402
+from src.models.losses import WeightedCrossEntropyLoss, BboxAwareLoss  # noqa: E402
+from segmentation_models_pytorch.losses import TverskyLoss # noqa: E402
 from src.models.evaluation import semantic_segmentation_evaluation  # noqa: E402
 from src.models.workflow import train, save_model  # noqa: E402
 from src.data import SegmentationDataset  # noqa: E402
@@ -41,9 +42,12 @@ MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
 EXPERIMENT_NAME = os.getenv("EXPERIMENT_NAME")
 DATASETS_DIR = os.getenv("DATASETS_DIR")
 UNET_MODEL_PREFIX = os.getenv("UNET_MODEL_PREFIX", "unet_bss_")
+UNET_ATTENTION_MODEL_PREFIX = os.getenv("UNET_ATTENTION_MODEL_PREFIX", "unet_attn_")
 
 supported_criteria = {
     "WeightedCrossEntropyLoss": WeightedCrossEntropyLoss,
+    "BboxAwareLoss": BboxAwareLoss,
+    "TverskyLoss": TverskyLoss,
     "BCELoss": torch.nn.BCELoss,
 }
 
@@ -70,7 +74,13 @@ with console.status("Connecting to MLFlow..."):
 print(colored_text("Connected to MLFLow server!", "green"))
 
 # Загрузка модели
-model = load_unet(**EXPCFG["model"]["args"]).to(EXPCFG["device"])
+if EXPCFG["model"]["name"] == "UNet":
+    model = load_unet(**EXPCFG["model"]["args"]).to(EXPCFG["device"])
+elif EXPCFG["model"]["name"] == "UNetAttention":
+    model = load_unet_attention(**EXPCFG["model"]["args"]).to(EXPCFG["device"])
+else:
+    raise ValueError(f"Unsupported model name: {EXPCFG['model']['name']}")
+
 EXPCFG["model"]["encoder_name"] = model.encoder.__class__.__name__
 
 # Задаём имя запуска
@@ -115,7 +125,7 @@ with console.status("Loading datasets..."):
     val_loader = torch.utils.data.DataLoader(
         val_ds,
         batch_size=EXPCFG["batch_size"],
-        shuffle=False,
+        shuffle=True,
         num_workers=0,
         pin_memory=True,
     )
@@ -141,7 +151,9 @@ print(colored_text(f"Dataset loaded. Train: {len(train_loader)}, Validation: {le
 
 # Инициализация оптимизатора и функции потерь
 optimizer = torch.optim.Adam(
-    filter(lambda p: p.requires_grad, model.parameters()), lr=EXPCFG["learning_rate"]
+    filter(lambda p: p.requires_grad, model.parameters()), 
+    lr=EXPCFG["learning_rate"],
+    weight_decay=0.01
 )
 if EXPCFG["criterion"]["name"] not in supported_criteria:
     raise ValueError(f"Unsupported criterion: {EXPCFG['criterion']['name']}")
@@ -200,6 +212,7 @@ with mlflow.start_run(run_name=run_name):
                 EXPCFG["device"],
                 save_path=vis_path,
                 num_samples=EXPCFG["visualization_samples"],
+                threshold=0.45
             )
         with console.status("Saving visualizations (5-15 sec)..."):
             mlflow.log_artifact(vis_path)
@@ -216,6 +229,11 @@ with mlflow.start_run(run_name=run_name):
     
     save_model_local = confirm("Save the model locally (Y/n)? ", invalid_response_defaults_to_no=False)
     if save_model_local:
-        save_model(trained_model, f"{UNET_MODEL_PREFIX}{EXPCFG['train_dataset']}_{run_name.replace(' ', '_')}")
+        if EXPCFG["model"]["name"] == "UNet":
+            save_model(trained_model, f"{UNET_MODEL_PREFIX}{EXPCFG['train_dataset']}_{run_name.replace(' ', '_')}")
+        elif EXPCFG["model"]["name"] == "UNetAttention":
+            save_model(trained_model, f"{UNET_ATTENTION_MODEL_PREFIX}{EXPCFG['train_dataset']}_{run_name.replace(' ', '_')}")
+        else:
+            save_model(trained_model, f"{EXPCFG['train_dataset']}_{run_name.replace(' ', '_')}")
         print(colored_text("Model saved locally!", "green"))
     

@@ -7,9 +7,9 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 # пути к папкам
-folder1 = r'datasets/OriginalDS/labels/labels/train'
-folder2 = r'datasets/tmp'
-folder3 = r'datasets/Deformation/images/train'
+folder1 = r'datasets/PipeBoxSegmentation/masks/train'
+folder2 = r'datasets/sorted_images/Disconnect/masks'
+folder3 = r'datasets/sorted_images/Disconnect/images'
 
 # создаём папку назначения, если вдруг её нет
 os.makedirs(folder2, exist_ok=True)

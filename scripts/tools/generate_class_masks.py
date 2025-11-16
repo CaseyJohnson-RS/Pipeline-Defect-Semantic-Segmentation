@@ -9,11 +9,11 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 # === ПАРАМЕТРЫ (измените под себя) ===
-images_dir = "datasets/Deformation/images/train"     # Папка с изображениями
-labels_dir = "datasets/tmp"     # Папка с .txt файлами YOLO
-output_dir = "datasets/Deformation/masks/train"     # Папка для сохранения масок
-target_class = 0                   # Класс, который нужно заливать (целое число)
-# ===================================
+images_dir = "datasets/sorted_images/Obstacle/images"     # Папка с изображениями
+labels_dir = "datasets/tmp/train"     # Папка с .txt файлами YOLO
+output_dir = "datasets/sorted_images/Obstacle/masks"     # Папка для сохранения масок
+target_class = 1                   # Класс, который нужно заливать (целое число)
+# =====================================
 
 # Создаём выходную директорию, если её нет
 Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -74,7 +74,7 @@ for img_path in Path(images_dir).iterdir():
             mask[y1:y2, x1:x2] = 255
 
     # Сохраняем маску с тем же расширением, что и у исходного изображения
-    mask_filename = img_path.stem + "_mask" + img_path.suffix
+    mask_filename = img_path.stem + img_path.suffix
     mask_path = Path(output_dir) / mask_filename
     cv2.imwrite(str(mask_path), mask)
 

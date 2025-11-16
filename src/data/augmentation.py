@@ -1,12 +1,76 @@
-import os
 import cv2
 import random
 import numpy as np
 import albumentations as A
 from tqdm import tqdm
 import torch
+from pathlib import Path
 from src import set_seed
+from typing import Optional
 
+def find_mask_by_image_name(mask_dir: Path, img_file: str) -> Optional[Path]:
+    """
+    Находит файл маски по первым 6 символам имени изображения.
+    Проверяет .png маски.
+    
+    Args:
+        mask_dir: директория с масками
+        img_file: имя файла изображения (например, "123456_aug.png")
+    
+    Returns:
+        Path к маске или None, если не найдено
+    """
+    if not mask_dir.exists():
+        return None
+        
+    base_name = Path(img_file).stem[:6]
+    candidates = list(mask_dir.glob(f"{base_name}*.png"))
+    
+    if not candidates:
+        return None
+
+    # Возвращаем маску с самым коротким именем (без дополнительных суффиксов)
+    candidates.sort(key=lambda p: len(p.name))
+    return candidates[0]
+
+def augment_and_save(
+    image_path: str, 
+    mask_path: str, 
+    out_image_dir: Path, 
+    out_mask_dir: Path, 
+    filename: str,
+    transform: A.Compose,
+    n_aug: int,
+    seed: int
+):
+    """
+    Выполняет аугментацию изображения и маски и сохраняет результаты.
+    """
+    image = cv2.imread(image_path)
+    mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+
+    if image is None or mask is None:
+        print(f"Ошибка чтения: {image_path} / {mask_path}")
+        return
+
+    if image.shape[:2] != mask.shape[:2]:
+        print(f"Несовпадение размеров: {image.shape[:2]} vs {mask.shape[:2]}")
+        return
+
+    base_name = Path(filename).stem
+
+    for i in range(n_aug):
+        # Используем собственный seed для каждого augment'а
+        local_seed = seed + i
+        random.seed(local_seed)
+        np.random.seed(local_seed)
+
+        augmented = transform(image=image, mask=mask)
+        aug_image = augmented["image"]
+        aug_mask = augmented["mask"]
+
+        cv2.imwrite(str(out_image_dir / f"{base_name}_aug{i}.png"), aug_image)
+        cv2.imwrite(str(out_mask_dir / f"{base_name}_aug{i}.png"), aug_mask)
 
 def augmentation_segmentation_ds(dataset_name: str, n_aug: int = 3, seed: int = 42):
     """
@@ -18,37 +82,28 @@ def augmentation_segmentation_ds(dataset_name: str, n_aug: int = 3, seed: int = 
         seed (int): случайное зерно для воспроизводимости
     """
     
-    # ==========================================================
-    # Фиксируем все random seed'ы
-    # ==========================================================
     set_seed(seed)
-
-    # Для повторяемости при работе DataLoader/torch
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    # ==========================================================
-    # Настройки путей
-    # ==========================================================
     SPLITS = ["train", "val"]
+    base_dir = Path(f"datasets/{dataset_name}")
+    base_output_dir = Path(f"datasets/{dataset_name}_augmented")
 
-    BASE_DIR = f"datasets/{dataset_name}"
-    BASE_OUTPUT_DIR = f"datasets/{dataset_name}_augmented"
+    # Проверка существования входной директории
+    if not base_dir.exists():
+        raise FileNotFoundError(f"Директория датасета не найдена: {base_dir}")
 
-    IMAGE_DIRS = {split: os.path.join(BASE_DIR, "images", split) for split in SPLITS}
-    MASK_DIRS = {split: os.path.join(BASE_DIR, "masks", split) for split in SPLITS}
-    OUTPUT_IMAGE_DIRS = {split: os.path.join(BASE_OUTPUT_DIR, "images", split) for split in SPLITS}
-    OUTPUT_MASK_DIRS = {split: os.path.join(BASE_OUTPUT_DIR, "masks", split) for split in SPLITS}
-
+    image_dirs = {split: base_dir / "images" / split for split in SPLITS}
+    mask_dirs = {split: base_dir / "masks" / split for split in SPLITS}
+    output_image_dirs = {split: base_output_dir / "images" / split for split in SPLITS}
+    output_mask_dirs = {split: base_output_dir / "masks" / split for split in SPLITS}
 
     # Создаём выходные директории
     for split in SPLITS:
-        os.makedirs(OUTPUT_IMAGE_DIRS[split], exist_ok=True)
-        os.makedirs(OUTPUT_MASK_DIRS[split], exist_ok=True)
+        output_image_dirs[split].mkdir(parents=True, exist_ok=True)
+        output_mask_dirs[split].mkdir(parents=True, exist_ok=True)
 
-    # ==========================================================
-    # Аугментации (детерминированные)
-    # ==========================================================
     transform = A.Compose([
         A.OneOf([
             A.GaussNoise(std_range=(0.01, 0.01,), p=1.0),
@@ -58,75 +113,29 @@ def augmentation_segmentation_ds(dataset_name: str, n_aug: int = 3, seed: int = 
         A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.8)
     ], additional_targets={"mask": "mask"})
 
-    # ==========================================================
-    # Функция аугментации и сохранения (вложена в основную)
-    # ==========================================================
-    def augment_and_save(image_path, mask_path, out_image_dir, out_mask_dir, filename):
-        image = cv2.imread(image_path)
-        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-
-        if image is None or mask is None:
-            print(f"⚠️ Ошибка чтения: {image_path} / {mask_path}")
-            return
-
-        if image.shape[:2] != mask.shape[:2]:
-            print(f"⚠️ Несовпадение размеров: {image_path} и {mask_path}")
-            return
-
-        base_name = os.path.splitext(filename)[0]
-
-        for i in range(n_aug):
-            # Используем собственный seed для каждого augment'а
-            local_seed = seed + i
-            random.seed(local_seed)
-            np.random.seed(local_seed)
-
-            augmented = transform(image=image, mask=mask)
-            aug_image = augmented["image"]
-            aug_mask = augmented["mask"]
-
-            cv2.imwrite(os.path.join(out_image_dir, f"{base_name}_aug{i}.jpg"), aug_image)
-            cv2.imwrite(os.path.join(out_mask_dir, f"{base_name}_aug{i}.png"), aug_mask)
-
-
-    # ==========================================================
-    # Основной цикл
-    # ==========================================================
     for split in SPLITS:
-        image_files = [f for f in os.listdir(IMAGE_DIRS[split]) if f.lower().endswith(".jpg")]
-
-        for img_file in tqdm(image_files, desc=f"Аугментация {split}"):
-            image_path = os.path.join(IMAGE_DIRS[split], img_file)
+        image_files = list(image_dirs[split].glob("*.png"))
+        
+        if not image_files:
+            print(f"Предупреждение: в {image_dirs[split]} не найдено .png изображений")
+            continue
             
-            mask_file = os.path.splitext(img_file)[0] + "_mask.png"
-            mask_path = os.path.join(MASK_DIRS[split], mask_file)
-
-            if os.path.exists(mask_path):
+        for img_file in tqdm(image_files, desc=f"Аугментация {split}", unit="img"):
+            mask_path = find_mask_by_image_name(mask_dirs[split], img_file.name)
+            
+            if mask_path:
                 augment_and_save(
-                    image_path,
-                    mask_path,
-                    OUTPUT_IMAGE_DIRS[split],
-                    OUTPUT_MASK_DIRS[split],
-                    img_file
+                    str(img_file),
+                    str(mask_path),
+                    output_image_dirs[split],
+                    output_mask_dirs[split],
+                    img_file.name,
+                    transform,
+                    n_aug,
+                    seed
                 )
-                continue
-            
-            # mask_file = os.path.splitext(img_file)[0] + "_mask.jpg"
-            # mask_path = os.path.join(MASK_DIRS[split], mask_file)
+            else:
+                base_name = img_file.stem[:6]
+                print(f"Маска не найдена для изображения '{img_file.name}' (поиск по базе: '{base_name}')")
 
-            # if os.path.exists(mask_path):
-            #     augment_and_save(
-            #         image_path,
-            #         mask_path,
-            #         OUTPUT_IMAGE_DIRS[split],
-            #         OUTPUT_MASK_DIRS[split],
-            #         img_file
-            #     )
-            #     continue
-            
-            print(f"⚠️ Маска не найдена: {mask_path}")
-
-
-            
-
-    print(f"Аугментация завершена. Результаты сохранены в: {BASE_OUTPUT_DIR}")
+    print(f"Аугментация завершена. Результаты сохранены в: {base_output_dir}")

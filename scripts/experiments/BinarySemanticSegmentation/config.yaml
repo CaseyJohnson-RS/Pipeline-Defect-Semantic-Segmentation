@@ -1,25 +1,27 @@
-seed: 43
+seed: 42
 
-epochs: 10
+epochs: 1
 learning_rate: 0.0001
-batch_size: 2
+batch_size: 2 # Наверное, лучшен не трогать
 criterion: 
-  name: WeightedCrossEntropyLoss
+  name: TverskyLoss
   args:
-    background_weight: 0.2
-    object_weight: 1
-    reduction: mean
+    alpha: 0.1
+    beta: 0.9
+    smooth: 1
+    mode: binary
+    from_logits: True
 
-train_dataset: Deformation_v1_augmented
-evaluation_dataset:
+train_dataset: DS_BASELINE # Тут
+evaluation_dataset: DS_EVAL # Тут
 image_size: [704, 512]
 model:
-  name: UNet
+  name: UNetAttention
   args:
-    encoder_name: mobilenet_v2
+    encoder_name: resnet34 # Тут, наверное
     encoder_weights: imagenet
     in_channels: 3
     classes: 1
 
-val_per_epoch: 10
+val_per_epoch: 1
 visualization_samples: 30

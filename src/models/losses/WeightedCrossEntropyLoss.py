@@ -70,24 +70,3 @@ class WeightedCrossEntropyLoss(nn.Module):
             logits, targets.float(), weight=weights, reduction=self.reduction
         )
         return loss
-
-
-# Пример использования
-if __name__ == "__main__":
-    # Имитируем данные
-    B, H, W = 2, 64, 64
-    logits = torch.randn(B, 1, H, W, requires_grad=True)
-    targets = torch.randint(0, 2, (B, 1, H, W)).float()
-
-    # Создаём критерий с усиленным штрафом за ошибки на объекте
-    criterion = WeightedCrossEntropyLoss(
-        background_weight=0.1, object_weight=1.0, reduction="mean"
-    )
-
-    # Вычисляем потерю
-    loss = criterion(logits, targets)
-    print(f"Loss: {loss.item():.4f}")
-
-    # Градиентный шаг
-    loss.backward()
-    print("Градиенты посчитаны.")
