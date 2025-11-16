@@ -103,7 +103,6 @@ print(colored_text("\nConfirmed", "green"))
 set_seed(EXPCFG["seed"])
 
 with console.status("Loading datasets..."):
-    print(os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "images", "train"))
     train_ds = SegmentationDataset(
         os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "images", "train"),
         os.path.join(DATASETS_DIR, EXPCFG["train_dataset"], "masks", "train"),

@@ -57,13 +57,23 @@ class ImageMaskDataset(Dataset):
 def parse_polygon(annotation_str):
     """Парсит JSON-строку с полигоном и возвращает координаты"""
     try:
+        # === ДОБАВЛЕНА ПРОВЕРКА: Пропуск пустых строк ===
+        if not annotation_str or annotation_str.strip() in ['{}', '""{}""', '""', '"" ""']:
+            return None, None
+            
         cleaned = annotation_str.replace('""', '"')
+        
+        # === ДОБАВЛЕНА ПРОВЕРКА: Повторная проверка после очистки ===
+        if not cleaned or cleaned.strip() == '{}':
+            return None, None
+            
         data = json.loads(cleaned)
-        if data['name'] == 'polygon':
+        # === ДОБАВЛЕНА ПРОВЕРКА: Проверка наличия необходимых полей ===
+        if data.get('name') == 'polygon' and 'all_points_x' in data and 'all_points_y' in data:
             return data['all_points_x'], data['all_points_y']
         return None, None
     except Exception as e:
-        print(f"Ошибка парсинга полигона: {e}")
+        print(f"Ошибка парсинга полигона: {e}, строка: {annotation_str[:50]}...")
         return None, None
 
 def create_mask_from_polygon(image_shape, points_x, points_y):
@@ -90,9 +100,24 @@ def get_file_mapping(directory):
 def get_pixel_perfect_names(labels_path):
     """Получает список имен файлов с pixel-perfect масками"""
     df = pd.read_csv(labels_path)
-    pixel_perfect_names = set()
-    for filename in df['filename']:
-        pixel_perfect_names.add(Path(filename).stem)
+    
+    # === ДОБАВЛЕНА ПРОВЕРКА: Фильтрация файлов без разметки ===
+    initial_count = len(df)
+    df_valid = df[
+        (df['region_count'] > 0) & 
+        (df['region_shape_attributes'].notna()) & 
+        (~df['region_shape_attributes'].astype(str).str.strip().isin(['{}', '""{}""', '']))
+    ]
+    
+    filtered_count = initial_count - len(df_valid)
+    if filtered_count > 0:
+        print(f"✅ Фильтровано {filtered_count} записей без валидной разметки")
+    
+    if len(df_valid) == 0:
+        print("⚠️  Внимание: Не найдено файлов с валидной pixel-perfect разметкой!")
+        
+    pixel_perfect_names = set(Path(filename).stem for filename in df_valid['filename'])
+    print(f"✅ Найдено {len(pixel_perfect_names)} уникальных файлов с pixel-perfect масками")
     return pixel_perfect_names
 
 def preprocess_for_model(image, target_size):
@@ -181,7 +206,7 @@ def augment_image_and_mask(image, mask, seed=None):
     return augmented_image, augmented_mask, aug_type
 
 def main():
-    global images_dir, image_mapping, annotations_by_name
+    global images_dir, image_mapping
     
     # 1. Сканируем папку images
     images_dir = SOURCE_DIR / "images"
@@ -193,8 +218,8 @@ def main():
     
     # 2. Получаем список файлов с pixel-perfect масками
     labels_path = SOURCE_DIR / "labels.csv"
+    # === ИЗМЕНЕНО: Теперь функция автоматически фильтрует файлы без разметки ===
     pixel_perfect_names = get_pixel_perfect_names(labels_path)
-    print(f"Найдено {len(pixel_perfect_names)} файлов с pixel-perfect масками")
     
     # 3. Определяем файлы без pixel-perfect масок (для улучшения)
     all_names = set(image_mapping.keys())
@@ -264,7 +289,6 @@ def main():
                 predicted_mask = np.zeros_like(original_mask)
             
             # Создание гибридной маски
-            # original_mask * alpha + predicted_mask * (1 - alpha)
             hybrid_mask = cv2.addWeighted(
                 original_mask, ALPHA,
                 predicted_mask, (1 - ALPHA),
