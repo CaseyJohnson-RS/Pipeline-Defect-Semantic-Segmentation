@@ -12,8 +12,8 @@ criterion:
     mode: binary
     from_logits: True
 
-train_dataset: DS_BASELINE # Тут
-evaluation_dataset: DS_EVAL # Тут
+train_dataset: Obstacle_BASELINE # Тут
+evaluation_dataset: Obstacle_EVAL # Тут
 image_size: [704, 512]
 model:
   name: UNetAttention
