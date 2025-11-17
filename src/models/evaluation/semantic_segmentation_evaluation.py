@@ -4,24 +4,43 @@ from src.models.scoring import compute_iou, compute_tpr, compute_tnr
 from src.console import gradient_color
 
 
-def _detect_mask_type(masks: torch.Tensor, eps: float = 1e-6) -> bool:
+def _detect_mask_type(val_loader, eps: float = 1e-6, max_batches = None) -> bool:
     """
-    Определяет тип масок, проверяя все батчи.
+    Определяет тип масок, проверяя все батчи из DataLoader.
     Возвращает True если это soft masks (карты вероятностей).
+    
+    Args:
+        val_loader: DataLoader или итератор, возвращающий батчи (images, masks, ...).
+        eps: Эпсилон для сравнения с плавающей точкой.
+        max_batches: Максимальное количество батчей для проверки (по умолчанию все).
+    
+    Returns:
+        True если найдены soft masks, False если все masks бинарные.
     """
-    # Быстрая проверка: если max > 1 в любом батче, то это точно soft
-    if masks.max() > 1.0 + eps:
-        return True
+    for batch_idx, batch in enumerate(val_loader):
+        # Извлекаем маски (предполагается, что на второй позиции: (images, masks, ...))
+        masks = batch[1] if isinstance(batch, (list, tuple)) else batch
+        
+        # Быстрая проверка: если max > 1 в любом батче, то это точно soft
+        if masks.max() > 1.0 + eps:
+            return True
+        
+        # Проверяем наличие значений, отличных от 0 и 1, в текущем батче
+        is_binary_element = torch.logical_or(
+            torch.abs(masks) < eps,
+            torch.abs(masks - 1.0) < eps
+        )
+        
+        # Если есть хотя бы один не-бинарный элемент в батче, то это soft
+        if not torch.all(is_binary_element):
+            return True
+        
+        # Ограничение количества проверяемых батчей для экономии времени
+        if max_batches is not None and batch_idx >= max_batches - 1:
+            break
     
-    # Проверяем наличие значений, отличных от 0 и 1, в любом батче
-    # Для каждого элемента проверяем, является ли он бинарным (0 или 1)
-    is_binary_element = torch.logical_or(
-        torch.abs(masks) < eps,
-        torch.abs(masks - 1.0) < eps
-    )
-    
-    # Если есть хотя бы один не-бинарный элемент в любом батче, то это soft
-    return not torch.all(is_binary_element)
+    # Если все проверенные батчи бинарные
+    return False
 
 
 def semantic_segmentation_evaluation(model, val_loader, criterion, device, log=False, prefix="Validation", colour="yellow"):
