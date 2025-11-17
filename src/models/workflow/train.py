@@ -92,6 +92,7 @@ def train(
         epochs: int,
         val_function: callable,
         val_per_epoch: int = 1,
+        save_by_metric: str = None
     ) -> nn.Module:
 
     model.to(device)
@@ -99,6 +100,7 @@ def train(
 
     global train_start_time
     train_start_time = datetime.now()
+    observable_metric_best_value = 0.0
 
     for epoch in range(epochs):
         model.train()
@@ -136,6 +138,11 @@ def train(
                     epoch * len(train_loader) + step,
                     {f"Validation {k}": v for k, v in val_dict['metrics'].items()} | {"Train Loss": avg_loss, 'epoch': epoch + step / len(train_loader)}
                 )
+                print(save_by_metric is not None and save_by_metric in val_dict['metrics'])
+                if save_by_metric is not None and save_by_metric in val_dict['metrics'] and observable_metric_best_value < val_dict['metrics'][save_by_metric]:
+                    print(colored_text(f"New best {save_by_metric}: {val_dict['metrics'][save_by_metric]:.4f} (previous: {observable_metric_best_value:.4f}).", "magenta"))
+                    observable_metric_best_value = val_dict['metrics'][save_by_metric]
+                    save_model_checkpoint(model)
             
             global pause
             if pause:

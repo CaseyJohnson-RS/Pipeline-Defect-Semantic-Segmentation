@@ -176,6 +176,7 @@ with mlflow.start_run(run_name=run_name):
         epochs=EXPCFG["epochs"],
         val_function=semantic_segmentation_evaluation,
         val_per_epoch=EXPCFG["val_per_epoch"],
+        save_by_metric=EXPCFG["save_by_metric"]
     )
 
     print(colored_text("Training completed!\n", "green"))

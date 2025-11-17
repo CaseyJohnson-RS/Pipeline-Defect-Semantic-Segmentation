@@ -1,8 +1,8 @@
 seed: 42
 
-epochs: 1
+epochs: 2
 learning_rate: 0.0001
-batch_size: 2 # Наверное, лучшен не трогать
+batch_size: 2
 criterion: 
   name: TverskyLoss
   args:
@@ -12,16 +12,17 @@ criterion:
     mode: binary
     from_logits: True
 
-train_dataset: Obstacle_BASELINE # Тут
-evaluation_dataset: Obstacle_EVAL # Тут
+train_dataset: Deformation_BASELINE
+evaluation_dataset: Deformation_EVAL
 image_size: [704, 512]
 model:
   name: UNetAttention
   args:
-    encoder_name: resnet34 # Тут, наверное
+    encoder_name: resnet34
     encoder_weights: imagenet
     in_channels: 3
     classes: 1
 
 val_per_epoch: 1
 visualization_samples: 30
+save_by_metric: "IoU" # Для BASELINE - IoU, для H_ - 'Soft IoU' или 'Recall', тут нужно подумать

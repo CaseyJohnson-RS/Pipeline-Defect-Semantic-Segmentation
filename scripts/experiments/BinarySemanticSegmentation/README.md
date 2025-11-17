@@ -44,8 +44,8 @@ $$
 Скачиваем один из датасетов и распаковываем в `datasets/`:
 
 1. [Deformation](https://drive.google.com/file/d/18vIr-kyKG3bxZd7sIsB6h_MmFDujMOxI/view?usp=sharing)
-2. Deposition
-3. Disconnect
+2. [Deposition](https://drive.google.com/file/d/10Q4bG7Rx7FYhgQ9oPccfx6L_dmVYo2zO/view?usp=sharing)
+3. [Disconnect](https://drive.google.com/file/d/1etdRvihZfpaw2sphg85hg0wawm5kpoHJ/view?usp=sharing)
 4. [Obstacle](https://drive.google.com/file/d/1c2vILrX9NTYukamw2As78rQTlWn04Noh/view?usp=sharing)
 
 Получаем такую структуру
