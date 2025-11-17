@@ -3,18 +3,31 @@
   
 Этот репозиторий - мастерская для проведения экспериментов по семантической сегментации дефектов труб.
 
-  
-
 ## О задаче
 
 
-Необходимо перейти от задачи детекции объектов к задаче семантической сегментации. Оригинальный датасет размеченный для задачи детекции находится по [ссылке](https://www.kaggle.com/datasets/simplexitypipeline/pipeline-defect-dataset).
+> **В двух словах**
+> 
+> Необходимо перейти от задачи детекции объектов к задаче семантической сегментации. Оригинальный датасет размеченный для задачи детекции находится по [ссылке](https://www.kaggle.com/datasets/simplexitypipeline/pipeline-defect-dataset).
+
+Необходимо научить модель делать сегментацию изображений дефектов труб по очень грубому датасету, который мы составили из оригинального путём заливки боксов для детекции.
+
+<p align="center">
+  <img src="./docs/detection_region.png" width="49%" />
+  <img src="./docs/segmentation_mask.png" width="49%" />
+  <i>Изображение деформации трубы с детекционным боксом и получившаяся маска</i>
+</p>
+
+Ссылка на новый [датасет](https://www.kaggle.com/datasets/caseyjohnsonrs/pipe-defect-box-semantic-segmentation).
 
 
+Задача усложняется следующими факторами:
+1. Некачественные данные - в оригинальном датасете были обнаружены дубликаты изображений и ложные детекционные боксы.
+2. Размер датасета - разметить вручную за достаточно короткое время не предоставляется возможным.
+3. 6 классов.
 
-## Инструкция настройки проекта
+## Инструкция по настройке окружения
 
-  
 
 | Tool          | Version                             |
 | ------------- | ----------------------------------- |
@@ -136,12 +149,13 @@ nvcc --version
 
 ```bash
 
-MLFLOW_TRACKING_URI=http://111.111.111.11:1111
-EXPERIMENT_NAME = "Pipeline Defects Detection"
-MODELS_DIR = 'models'
-DATASETS_DIR = 'datasets'
-UNET_MODEL_PREFIX = "unet_bss_"
-USERNAME="Casey"
+MLFLOW_TRACKING_URI=http://111.111.111.111:5001
+EXPERIMENT_NAME="Pipeline Defects Detection"
+MODELS_DIR=models
+DATASETS_DIR=datasets
+UNET_MODEL_PREFIX=unet_bss_
+UNET_ATTENTION_MODEL_PREFIX=unet_attn_
+USERNAME=Casey
 
 ```
 

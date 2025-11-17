@@ -1,37 +1,91 @@
 import importlib
 import torch
 import platform
+from typing import Dict, List, Optional, Tuple
 
-REQUIRED_PACKAGES = [
-    "dotenv",
-    "PIL",
-    "numpy",
-    "matplotlib",
-    "tqdm",
-    "mlflow",
-    "segmentation_models_pytorch",
-    "cv2",
-    "albumentations",
-    "ipykernel",
-    "rich"
+# Словарь маппинга имён PyPI -> имён импорта
+PACKAGE_NAME_MAP: Dict[str, str] = {
+    "pillow": "PIL",
+    "opencv-python": "cv2",
+    "segmentation-models-pytorch": "segmentation_models_pytorch",
+}
+
+# Список зависимостей с версиями
+REQUIREMENTS: List[str] = [
+    "dotenv==0.9.9",
+    "pillow==12.0.0",
+    "numpy==2.2.6",
+    "matplotlib==3.10.7",
+    "tqdm==4.67.1",
+    "mlflow==3.6.0",
+    "segmentation-models-pytorch==0.5.0",
+    "opencv-python==4.12.0.88",
+    "albumentations==2.0.8",
+    "ipykernel==7.1.0",
+    "rich==14.2.0",
+    "imagehash==4.3.2"
 ]
+
+# Попытка импорта packaging для сравнения версий
+try:
+    from packaging import version
+    HAS_PACKAGING = True
+except ImportError:
+    HAS_PACKAGING = False
+    print("[⚠] 'packaging' not installed - version comparison will be limited")
 
 print("=" * 60)
 print(f"🔍 Python environment check — {platform.python_version()}")
 print("=" * 60)
 
-def check_package(name):
-    try:
-        module = importlib.import_module(name)
-        version = getattr(module, "__version__", "built-in")
-        print(f"[✔] {name} — version: {version}")
-    except ImportError as e:
-        print(f"[✘] {name} — NOT FOUND ({e.__class__.__name__})")
-    except Exception as e:
-        print(f"[⚠] {name} — import error: {e}")
+def parse_requirement(req: str) -> Tuple[str, Optional[str]]:
+    """Парсит строку зависимости вида 'package==version'."""
+    if "==" in req:
+        pkg_name, req_version = req.split("==", 1)
+        return pkg_name.strip(), req_version.strip()
+    return req.strip(), None
 
-for pkg in REQUIRED_PACKAGES:
-    check_package(pkg)
+def check_package(requirement: str):
+    """Проверяет пакет и его версию. Формат: 'package==version'"""
+    pkg_name, required_version = parse_requirement(requirement)
+    import_name = PACKAGE_NAME_MAP.get(pkg_name, pkg_name)
+    
+    try:
+        module = importlib.import_module(import_name)
+        actual_version = getattr(module, "__version__", None)
+        
+        if actual_version:
+            if required_version:
+                if HAS_PACKAGING:
+                    try:
+                        req_ver = version.parse(required_version)
+                        act_ver = version.parse(actual_version)
+                        
+                        if act_ver == req_ver:
+                            status, msg = "[✔]", f"{actual_version} (matches)"
+                        elif act_ver > req_ver:
+                            status, msg = "[⚠]", f"{actual_version} (newer than {required_version})"
+                        else:
+                            status, msg = "[✘]", f"{actual_version} (older than {required_version})"
+                    except Exception as _:
+                        status, msg = "[✔]", f"{actual_version} (required: {required_version})"
+                else:
+                    status, msg = "[✔]", f"{actual_version} (required: {required_version})"
+            else:
+                status, msg = "[✔]", actual_version
+        else:
+            status = "[✔]"
+            msg = "built-in (no version info)"
+            
+        print(f"{status} {pkg_name} — {msg}")
+                
+    except ImportError as e:
+        print(f"[✘] {pkg_name} — NOT FOUND ({e.__class__.__name__})")
+    except Exception as e:
+        print(f"[⚠] {pkg_name} — import error: {e}")
+
+for req in REQUIREMENTS:
+    check_package(req)
 
 print("\n" + "=" * 60)
 print("🔍 PyTorch check")
