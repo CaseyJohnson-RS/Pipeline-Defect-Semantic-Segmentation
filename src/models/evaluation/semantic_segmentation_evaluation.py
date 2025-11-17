@@ -6,23 +6,22 @@ from src.console import gradient_color
 
 def _detect_mask_type(masks: torch.Tensor, eps: float = 1e-6) -> bool:
     """
-    Определяет тип масок по первому батчу.
+    Определяет тип масок, проверяя все батчи.
     Возвращает True если это soft masks (карты вероятностей).
     """
-    # Быстрая проверка: если max > 1, то это точно soft
+    # Быстрая проверка: если max > 1 в любом батче, то это точно soft
     if masks.max() > 1.0 + eps:
         return True
     
-    # Проверяем уникальные значения
-    unique_vals = torch.unique(masks)
-    is_binary = torch.all(
-        torch.logical_or(
-            torch.abs(unique_vals) < eps,
-            torch.abs(unique_vals - 1.0) < eps
-        )
+    # Проверяем наличие значений, отличных от 0 и 1, в любом батче
+    # Для каждого элемента проверяем, является ли он бинарным (0 или 1)
+    is_binary_element = torch.logical_or(
+        torch.abs(masks) < eps,
+        torch.abs(masks - 1.0) < eps
     )
     
-    return not is_binary
+    # Если есть хотя бы один не-бинарный элемент в любом батче, то это soft
+    return not torch.all(is_binary_element)
 
 
 def semantic_segmentation_evaluation(model, val_loader, criterion, device, log=False, prefix="Validation", colour="yellow"):

@@ -22,7 +22,7 @@ BASELINE_DIR = Path(f"datasets/{DATASET_NAME}_BASELINE")
 OUTPUT_DIR = Path(f"datasets/{DATASET_NAME}_H")  # Будет дополнен значением alpha
 
 # Параметры модели и улучшения масок
-ALPHA = 0.75  # Коэффициент для гибридных масок
+ALPHA = 0.35  # Коэффициент для гибридных масок
 MODEL_INPUT_SIZE = (702, 512)  # Размер входа модели
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
