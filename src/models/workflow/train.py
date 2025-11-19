@@ -197,7 +197,7 @@ def train(
         tqdm.write("Evaluation\t" + eval_dict['console_log'])
         
         log_metrics(
-            total_steps,
+            total_steps + 1,
             {f"Evaluation {k}": v for k, v in eval_dict['metrics'].items()}
         )
 
