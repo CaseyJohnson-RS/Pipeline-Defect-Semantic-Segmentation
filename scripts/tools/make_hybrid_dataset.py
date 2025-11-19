@@ -22,7 +22,7 @@ BASELINE_DIR = Path(f"datasets/{DATASET_NAME}_BASELINE")
 OUTPUT_DIR = Path(f"datasets/{DATASET_NAME}_H")  # Будет дополнен значением alpha
 
 # Параметры модели и улучшения масок
-ALPHA = 0.35  # Коэффициент для гибридных масок
+ALPHA = 0.1  # Коэффициент для гибридных масок
 MODEL_INPUT_SIZE = (702, 512)  # Размер входа модели
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -283,6 +283,7 @@ def main():
             # Получение предсказания модели
             try:
                 predicted_mask = predict_mask(model, src_image_path, MODEL_INPUT_SIZE, DEVICE)
+                predicted_mask[original_mask == 0] = 0
             except Exception as e:
                 print(f"Ошибка предсказания для {name}: {e}")
                 # Если ошибка, используем только оригинальную маску

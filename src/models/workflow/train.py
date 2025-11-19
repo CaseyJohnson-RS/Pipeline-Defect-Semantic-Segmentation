@@ -88,6 +88,7 @@ def train(
         optimizer,
         train_loader,
         val_loader,
+        eval_loader,
         device,
         epochs: int,
         val_function: callable,
@@ -101,6 +102,7 @@ def train(
     global train_start_time
     train_start_time = datetime.now()
     observable_metric_best_value = 0.0
+    total_steps = 0
 
     for epoch in range(epochs):
         model.train()
@@ -127,22 +129,46 @@ def train(
             avg_loss = cum_loss / step
             tqdm_train_loader.set_postfix({"loss": f"{avg_loss:.3f}"})
 
-            if step % val_every_steps == 0 and val_loader is not None and val_function is not None and val_per_epoch > 0:
+            if step % val_every_steps == 0 and val_per_epoch > 0:
+
                 model.eval()
 
-                val_dict = val_function(model, val_loader, criterion, device, log=True, prefix="Validation", colour="#8600bf")
+                if val_loader is not None and val_function is not None:
+                    
 
-                tqdm.write("Validation\t" + val_dict['console_log'])
-                
-                log_metrics(
-                    epoch * len(train_loader) + step,
-                    {f"Validation {k}": v for k, v in val_dict['metrics'].items()} | {"Train Loss": avg_loss, 'epoch': epoch + step / len(train_loader)}
-                )
-                if save_by_metric is not None and save_by_metric in val_dict['metrics'] and observable_metric_best_value < val_dict['metrics'][save_by_metric]:
-                    print('\n' + colored_text(f"New best {save_by_metric}: {val_dict['metrics'][save_by_metric]:.4f} (previous: {observable_metric_best_value:.4f}).", "magenta"))
-                    observable_metric_best_value = val_dict['metrics'][save_by_metric]
-                    save_model_checkpoint(model)
-            
+                    val_dict = val_function(model, val_loader, criterion, device, log=True, prefix="Validation", colour="#8600bf")
+
+                    tqdm.write("Validation\t" + val_dict['console_log'])
+                    
+                    log_metrics(
+                        epoch * len(train_loader) + step,
+                        {f"Validation {k}": v for k, v in val_dict['metrics'].items()}
+                    )
+                    # if save_by_metric is not None and save_by_metric in val_dict['metrics'] and observable_metric_best_value < val_dict['metrics'][save_by_metric]:
+                    #     print('\n' + colored_text(f"New best {save_by_metric}: {val_dict['metrics'][save_by_metric]:.4f} (previous: {observable_metric_best_value:.4f}).", "magenta"))
+                    #     observable_metric_best_value = val_dict['metrics'][save_by_metric]
+                    #     save_model_checkpoint(model)
+
+                if eval_loader is not None and val_function is not None:
+
+                    eval_dict = val_function(model, eval_loader, criterion, device, log=True, prefix="Evaluation", colour="#0099bf")
+
+                    tqdm.write("Evaluation\t" + eval_dict['console_log'])
+                    
+                    log_metrics(
+                        epoch * len(train_loader) + step,
+                        {f"Evaluation {k}": v for k, v in eval_dict['metrics'].items()}
+                    )
+                    if save_by_metric is not None and save_by_metric in eval_dict['metrics'] and observable_metric_best_value < eval_dict['metrics'][save_by_metric]:
+                        print('\n' + colored_text(f"New best {save_by_metric}: {eval_dict['metrics'][save_by_metric]:.4f} (previous: {observable_metric_best_value:.4f}).", "green"))
+                        observable_metric_best_value = eval_dict['metrics'][save_by_metric]
+                        save_model_checkpoint(model)
+
+                log_metrics(epoch * len(train_loader) + step, {"Train Loss": avg_loss, 'epoch': epoch + step / len(train_loader)})
+
+
+            total_steps = epoch * len(train_loader) + step
+
             global pause
             if pause:
                 print(colored_text("\nTraining paused.", "yellow"))
@@ -162,4 +188,17 @@ def train(
 
                 print(colored_text("Training continue...", "yellow"))
 
-    return choose_model_checkpoint(model, device)
+    model = choose_model_checkpoint(model, device)
+
+    if eval_loader is not None and val_function is not None:
+
+        eval_dict = val_function(model, eval_loader, criterion, device, log=True, prefix="Final evaluation", colour="#00bf50")
+
+        tqdm.write("Evaluation\t" + eval_dict['console_log'])
+        
+        log_metrics(
+            total_steps,
+            {f"Evaluation {k}": v for k, v in eval_dict['metrics'].items()}
+        )
+
+    return model

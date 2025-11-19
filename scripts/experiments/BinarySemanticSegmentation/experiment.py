@@ -170,6 +170,7 @@ with mlflow.start_run(run_name=run_name):
         model=model,
         train_loader=train_loader,
         val_loader=val_loader,
+        eval_loader=eval_loader,
         criterion=criterion,
         optimizer=optimizer,
         device=EXPCFG["device"],
@@ -180,24 +181,6 @@ with mlflow.start_run(run_name=run_name):
     )
 
     print(colored_text("Training completed!\n", "green"))
-
-    if eval_loader:
-        results = semantic_segmentation_evaluation(
-            trained_model,
-            val_loader=eval_loader,
-            criterion=criterion,
-            device=EXPCFG["device"],
-            log=True,
-            prefix="Evaluation",
-            colour="#00afc9",
-        )
-
-        print(colored_text("\nEvaluation results:", "green"))
-        print(results["console_log"])
-
-        mlflow.log_metrics(
-            {f"Evaluation {k}": v for k, v in results['metrics'].items()}
-        )
 
     # Визуализируем предсказания
     make_viz = confirm("Make visualizations (Y/n)? ", invalid_response_defaults_to_no=False)

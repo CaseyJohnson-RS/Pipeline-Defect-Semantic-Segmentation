@@ -2,17 +2,17 @@ seed: 42
 
 epochs: 30
 learning_rate: 0.0001
-batch_size: 2
+batch_size: 4
 criterion: 
   name: TverskyLoss
   args:
-    alpha: 0.4
-    beta: 0.6
+    alpha: 0.5
+    beta: 0.5
     smooth: 1
     mode: binary
     from_logits: True
 
-train_dataset: Deformation_H1
+train_dataset: Deformation_BASELINE
 evaluation_dataset: Deformation_EVAL
 image_size: [704, 512]
 model:
@@ -25,4 +25,4 @@ model:
 
 val_per_epoch: 2
 visualization_samples: 30
-save_by_metric: "Soft IoU" # Для BASELINE - IoU, для H_ - 'Soft IoU' или 'Recall', тут нужно подумать
+save_by_metric: "IoU"
