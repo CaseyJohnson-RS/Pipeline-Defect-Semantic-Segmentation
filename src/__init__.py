@@ -10,7 +10,7 @@ load_dotenv()
 
 
 def set_seed(SEED):
-    """Устанавливает seed для воспроизводимости результатов."""
+    """Sets seed for reproducible results."""
     random.seed(SEED)
     np.random.seed(SEED)
     torch.manual_seed(SEED)
@@ -22,25 +22,25 @@ def set_seed(SEED):
 
 
 def check_cuda_available():
-    """Выводит информацию о доступности CUDA и GPU."""
-    print("CUDA доступен:", torch.cuda.is_available())
-    print("Число GPU:", torch.cuda.device_count())
+    """Prints information about CUDA and GPU availability."""
+    print("CUDA available:", torch.cuda.is_available())
+    print("Number of GPUs:", torch.cuda.device_count())
     if torch.cuda.is_available():
-        print("Имя GPU:", torch.cuda.get_device_name(0))
-        print("Версия CUDA:", torch.version.cuda)
+        print("GPU name:", torch.cuda.get_device_name(0))
+        print("CUDA version:", torch.version.cuda)
         return True
     return False
 
 
-def load_yaml_file(filepath: str | Path) -> Optional[dict]:
+def load_yaml(filepath: str | Path) -> Optional[dict]:
     """
-    Загружает YAML‑файл и возвращает его содержимое в виде словаря.
+    Loads a YAML file and returns its contents as a dictionary.
 
     Args:
-        filepath: путь к YAML‑файлу (строка или объект Path)
+        filepath: path to YAML file (string or Path object)
 
     Returns:
-        Словарь с данными из YAML‑файла или None при ошибке
+        Dictionary with YAML file data or None on error
 
     Examples:
         >>> data = load_yaml_file("config.yaml")
@@ -49,37 +49,37 @@ def load_yaml_file(filepath: str | Path) -> Optional[dict]:
     """
     file_path = Path(filepath)
 
-    # Проверка существования файла
+    # Check if file exists
     if not file_path.exists():
-        print(f"Файл не найден: {file_path}")
+        print(f"File not found: {file_path}")
         return None
 
-    # Проверка, что это файл (а не директория)
+    # Check that it's a file (not a directory)
     if not file_path.is_file():
-        print(f"Указанный путь не является файлом: {file_path}")
+        print(f"The path is not a file: {file_path}")
         return None
 
     try:
         with file_path.open('r', encoding='utf-8') as file:
             data = yaml.safe_load(file)
             
-        # Проверка, что загруженные данные — словарь
+        # Check that loaded data is a dictionary
         if not isinstance(data, dict):
-            print(f"Содержимое файла не является словарём: {file_path}")
+            print(f"File content is not a dictionary: {file_path}")
             return None
             
         return data
 
     except yaml.YAMLError as e:
-        print(f"Ошибка парсинга YAML в файле {file_path}: {e}")
+        print(f"YAML parsing error in file {file_path}: {e}")
         return None
     except PermissionError:
-        print(f"Нет прав на чтение файла: {file_path}")
+        print(f"No read permission for file: {file_path}")
         return None
     except UnicodeDecodeError as e:
-        print(f"Ошибка декодирования UTF-8 в файле {file_path}: {e}")
+        print(f"UTF-8 decoding error in file {file_path}: {e}")
         return None
     except Exception as e:
-        print(f"Неожиданная ошибка при чтении файла {file_path}: {e}")
+        print(f"Unexpected error reading file {file_path}: {e}")
         return None
 

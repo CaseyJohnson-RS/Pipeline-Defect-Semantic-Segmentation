@@ -8,3 +8,4 @@ trash/
 .vscode/
 .pytest_cache/
 predictions.png
+mlruns/

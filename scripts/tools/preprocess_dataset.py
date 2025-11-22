@@ -19,47 +19,47 @@ BASELINE_DIR = Path(f"datasets/{DATASET_NAME}_BASELINE")
 EVAL_DIR = Path(f"datasets/{DATASET_NAME}_EVAL")
 
 RANDOM_SEED = 42
-TRAIN_VAL_SPLIT = 0.85  # 85% для train
-NUM_AUGMENTATIONS = 3   # Количество аугментированных изображений на одно оригинальное
+TRAIN_VAL_SPLIT = 0.85  # 85% for train
+NUM_AUGMENTATIONS = 3   # Number of augmented images per original
 # ============================================
 
 def parse_polygon(annotation_str):
-    """Парсит JSON-строку с полигоном и возвращает координаты"""
+    """Parses JSON string with polygon and returns coordinates"""
     try:
-        # === ДОБАВЛЕНО: Проверка на пустую или недействительную строку ===
+        # === ADDED: Check for empty or invalid string ===
         if not annotation_str or annotation_str.strip() in ['{}', '""{}""', '""']:
             return None, None
             
         cleaned = annotation_str.replace('""', '"')
         
-        # === ДОБАВЛЕНО: Повторная проверка после очистки ===
+        # === ADDED: Recheck after cleanup ===
         if not cleaned or cleaned.strip() == '{}':
             return None, None
             
         data = json.loads(cleaned)
         
-        # === ДОБАВЛЕНО: Проверка наличия необходимых полей ===
+        # === ADDED: Check for required fields ===
         if data.get('name') == 'polygon' and 'all_points_x' in data and 'all_points_y' in data:
             return data['all_points_x'], data['all_points_y']
         return None, None
     except Exception as e:
-        print(f"Ошибка парсинга полигона: {e}, строка: {annotation_str[:50]}...")
+        print(f"Polygon parsing error: {e}, line: {annotation_str[:50]}...")
         return None, None
 
 def create_mask_from_polygon(image_shape, points_x, points_y):
-    """Создает бинарную маску из координат полигона"""
+    """Creates binary mask from polygon coordinates"""
     mask = np.zeros(image_shape[:2], dtype=np.uint8)
     points = np.array(list(zip(points_x, points_y)), dtype=np.int32)
     cv2.fillPoly(mask, [points], color=255)
     return mask
 
 def copy_or_create_dirs(*dirs):
-    """Создает директории, если они не существуют"""
+    """Creates directories if they don't exist"""
     for dir_path in dirs:
         dir_path.mkdir(parents=True, exist_ok=True)
 
 def get_file_mapping(directory):
-    """Создает словарь {имя_без_расширения: полное_имя_файла}"""
+    """Creates dict {name_without_extension: full_filename}"""
     mapping = {}
     for file_path in directory.iterdir():
         if file_path.is_file():
@@ -68,7 +68,7 @@ def get_file_mapping(directory):
     return mapping
 
 def augment_image_and_mask(image, mask, seed=None):
-    """Применяет случайную лёгкую аугментацию к изображению и маске"""
+    """Applies random light augmentation to image and mask"""
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed)
@@ -98,9 +98,9 @@ def augment_image_and_mask(image, mask, seed=None):
     return augmented_image, augmented_mask, aug_type
 
 def process_files(name_list, img_dest_dir, mask_dest_dir, split_name="", apply_aug=False):
-    """Обрабатывает список имен файлов (без расширения)"""
-    print(f"\nОбработка {split_name}: {len(name_list)} файлов" + 
-          (" + аугментация" if apply_aug else ""))
+    """Processes list of filenames (without extension)"""
+    print(f"\nProcessing {split_name}: {len(name_list)} files" + 
+          (" + augmentation" if apply_aug else ""))
     
     processed_count = 0
     
@@ -111,38 +111,38 @@ def process_files(name_list, img_dest_dir, mask_dest_dir, split_name="", apply_a
         try:
             image = cv2.imread(str(src_image_path))
             if image is None:
-                print(f"Ошибка чтения изображения {src_image_path}")
+                print(f"Error reading image {src_image_path}")
                 continue
         except Exception as e:
-            print(f"Ошибка при чтении {src_image_path}: {e}")
+            print(f"Error reading {src_image_path}: {e}")
             continue
         
-        # === ДОБАВЛЕНО: Проверка наличия аннотаций ===
+        # === ADDED: Check for annotations existence ===
         if name not in annotations_by_name:
-            print(f"Предупреждение: Нет аннотаций для файла {name}")
+            print(f"Warning: No annotations for file {name}")
             continue
             
         annotations = annotations_by_name[name]
         
-        # === ДОБАВЛЕНО: Проверка, что аннотации не пустые ===
+        # === ADDED: Check that annotations are not empty ===
         if not annotations:
-            print(f"Предупреждение: Пустые аннотации для файла {name}")
+            print(f"Warning: Empty annotations for file {name}")
             continue
         
-        # Создание оригинальной маски
+        # Create original mask
         combined_mask = np.zeros(image.shape[:2], dtype=np.uint8)
-        valid_polygons_found = False  # === ДОБАВЛЕНО ===
+        valid_polygons_found = False  # === ADDED ===
         
         for row in annotations:
             points_x, points_y = parse_polygon(row['region_shape_attributes'])
             if points_x is not None and points_y is not None:
                 mask = create_mask_from_polygon(image.shape, points_x, points_y)
                 combined_mask = cv2.bitwise_or(combined_mask, mask)
-                valid_polygons_found = True  # === ДОБАВЛЕНО ===
+                valid_polygons_found = True  # === ADDED ===
         
-        # === ДОБАВЛЕНО: Пропуск файла, если не найдено валидных полигонов ===
+        # === ADDED: Skip file if no valid polygons found ===
         if not valid_polygons_found:
-            print(f"Предупреждение: Не найдено валидных полигонов для файла {name}")
+            print(f"Warning: No valid polygons found for file {name}")
             continue
         
         dest_image_path = img_dest_dir / real_filename
@@ -154,7 +154,7 @@ def process_files(name_list, img_dest_dir, mask_dest_dir, split_name="", apply_a
             cv2.imwrite(str(dest_mask_path), combined_mask)
             processed_count += 1
         except Exception as e:
-            print(f"Ошибка сохранения {real_filename}: {e}")
+            print(f"Save error {real_filename}: {e}")
             continue
         
         if apply_aug:
@@ -174,27 +174,27 @@ def process_files(name_list, img_dest_dir, mask_dest_dir, split_name="", apply_a
                 processed_count += 1
                 
                 if len(name_list) <= 3:
-                    print(f"    Оригинал: {real_filename} -> {aug_type} -> {aug_image_name}")
+                    print(f"    Original: {real_filename} -> {aug_type} -> {aug_image_name}")
     
-    print(f"  Сохранено {processed_count} файлов (включая аугментированные)")
+    print(f"  Saved {processed_count} files (including augmented)")
 
 def main():
     global images_dir, image_mapping, annotations_by_name
     
     images_dir = SOURCE_DIR / "images"
     if not images_dir.exists():
-        raise FileNotFoundError(f"Папка {images_dir} не найдена!")
+        raise FileNotFoundError(f"Folder {images_dir} not found!")
     
     image_mapping = get_file_mapping(images_dir)
-    print(f"Найдено {len(image_mapping)} файлов в папке images")
+    print(f"Found {len(image_mapping)} files in images folder")
     
     labels_path = SOURCE_DIR / "labels.csv"
     if not labels_path.exists():
-        raise FileNotFoundError(f"Файл {labels_path} не найден!")
+        raise FileNotFoundError(f"File {labels_path} not found!")
     
     df = pd.read_csv(labels_path)
     
-    # === ДОБАВЛЕНО: Фильтрация файлов без разметки ===
+    # === ADDED: Filter files without annotations ===
     initial_count = len(df)
     df = df[(df['region_count'] > 0) & 
             (df['region_shape_attributes'].notna()) & 
@@ -203,7 +203,7 @@ def main():
     filtered_count = initial_count - len(df)
     
     if filtered_count > 0:
-        print(f"✅ Фильтровано {filtered_count} файлов без разметки (region_count=0)")
+        print(f"✅ Filtered {filtered_count} files without annotations (region_count=0)")
     # ============================================
     
     annotations_by_name = {}
@@ -216,14 +216,14 @@ def main():
                 annotations_by_name[name_without_ext] = []
             annotations_by_name[name_without_ext].append(row)
         else:
-            print(f"Предупреждение: Файл '{csv_filename}' из CSV не найден в папке images")
+            print(f"Warning: File '{csv_filename}' from CSV not found in images folder")
     
     valid_names = list(annotations_by_name.keys())
     total_files = len(valid_names)
-    print(f"\nНайдено {total_files} файлов с pixel-perfect масками и соответствующими изображениями")
+    print(f"\nFound {total_files} files with pixel-perfect masks and corresponding images")
     
     if total_files == 0:
-        print("Ошибка: Не найдено ни одного файла для обработки. Проверьте соответствие имен в CSV и папке images.")
+        print("Error: No files found for processing. Check name correspondence in CSV and images folder.")
         return
     
     baseline_names, eval_names = train_test_split(
@@ -233,8 +233,8 @@ def main():
         shuffle=True
     )
     
-    print(f"BASELINE: {len(baseline_names)} файлов")
-    print(f"EVAL: {len(eval_names)} файлов")
+    print(f"BASELINE: {len(baseline_names)} files")
+    print(f"EVAL: {len(eval_names)} files")
     
     baseline_images_train = BASELINE_DIR / "images" / "train"
     baseline_images_val = BASELINE_DIR / "images" / "val"
@@ -265,7 +265,7 @@ def main():
     
     process_files(eval_names, eval_images, eval_masks, "EVAL", apply_aug=False)
     
-    print("\n✅ Готово! Датасеты созданы:")
+    print("\n✅ Done! Datasets created:")
     print(f"   - BASELINE: {BASELINE_DIR}")
     print(f"   - EVAL: {EVAL_DIR}")
 

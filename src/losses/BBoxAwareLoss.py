@@ -3,22 +3,22 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-class BboxAwareLoss(nn.Module):
+class BBoxAwareLoss(nn.Module):
     """
-    BCE Loss с пониженным весом на границах bbox.
-    Границы bbox получим через морфологический градиент.
+    BCE Loss with reduced weight on bbox borders.
+    Bbox borders obtained through morphological gradient.
     """
     def __init__(self, reduction='mean'):
         super().__init__()
         self.bce = nn.BCEWithLogitsLoss(reduction='none')
         
     def forward(self, pred, target):
-        # target может быть soft [0.0-1.0]
+        # target can be soft [0.0-1.0]
         loss = self.bce(pred, target)
         
-        # Если это "жесткая" маска (0/1), создаем веса
+        # If it's a "hard" mask (0/1), create weights
         if target.max() == 1.0 and target.min() == 0.0:
-            # Граница bbox (дилатация - эрозия)
+            # Bbox border (dilation - erosion)
             mask_np = target.cpu().numpy()
             weights = np.ones_like(mask_np)
             
@@ -29,7 +29,7 @@ class BboxAwareLoss(nn.Module):
                     dilated = cv2.dilate(binary_mask, kernel, iterations=1)
                     eroded = cv2.erode(binary_mask, kernel, iterations=1)
                     edge = dilated - eroded
-                    weights[i, 0][edge > 0] = 0.1  # Низкий вес на границах
+                    weights[i, 0][edge > 0] = 0.1  # Low weight on edges
             
             weights = torch.from_numpy(weights).to(pred.device)
             loss = loss * weights

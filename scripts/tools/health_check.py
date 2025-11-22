@@ -3,14 +3,14 @@ import torch
 import platform
 from typing import Dict, List, Optional, Tuple
 
-# Словарь маппинга имён PyPI -> имён импорта
+# Mapping dictionary PyPI names -> import names
 PACKAGE_NAME_MAP: Dict[str, str] = {
     "pillow": "PIL",
     "opencv-python": "cv2",
     "segmentation-models-pytorch": "segmentation_models_pytorch",
 }
 
-# Список зависимостей с версиями
+# List of dependencies with versions
 REQUIREMENTS: List[str] = [
     "dotenv==0.9.9",
     "pillow==12.0.0",
@@ -26,7 +26,7 @@ REQUIREMENTS: List[str] = [
     "imagehash==4.3.2"
 ]
 
-# Попытка импорта packaging для сравнения версий
+# Try to import packaging for version comparison
 try:
     from packaging import version
     HAS_PACKAGING = True
@@ -39,14 +39,14 @@ print(f"🔍 Python environment check — {platform.python_version()}")
 print("=" * 60)
 
 def parse_requirement(req: str) -> Tuple[str, Optional[str]]:
-    """Парсит строку зависимости вида 'package==version'."""
+    """Parses dependency string like 'package==version'."""
     if "==" in req:
         pkg_name, req_version = req.split("==", 1)
         return pkg_name.strip(), req_version.strip()
     return req.strip(), None
 
 def check_package(requirement: str):
-    """Проверяет пакет и его версию. Формат: 'package==version'"""
+    """Checks package and its version. Format: 'package==version'"""
     pkg_name, required_version = parse_requirement(requirement)
     import_name = PACKAGE_NAME_MAP.get(pkg_name, pkg_name)
     
