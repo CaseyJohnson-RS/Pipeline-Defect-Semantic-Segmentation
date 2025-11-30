@@ -33,8 +33,11 @@ print(f"# {'=' * (terminal_width - 4)} #\n")
 # Connect to MLFlow
 tracking.connect_server(MLFLOW_TRACKING_URI, CONFIG['experiment_name'])
 
-# Load model
-model = load_model(CONFIG['model']['name'])
+# Load model (use args from config when creating a new model)
+model = load_model(
+    CONFIG['model']['name'],
+    **CONFIG['model']['args']
+)
 
 # Confirm parameters
 print("Parameters:")
@@ -67,14 +70,17 @@ train_ds = SegmentationDataset(
     os.path.join(DATASETS_DIR, CONFIG["train_dataset"], "masks"),
     CONFIG["image_size"],
 )
-train_loader = torch.utils.data.DataLoader(train_ds,**loaders_args)
+train_loader = torch.utils.data.DataLoader(train_ds, **loaders_args)
+
+# For validation/evaluation we don't want to shuffle (stable metrics)
+val_loaders_args = {**loaders_args, 'shuffle': False}
 
 val_ds = SegmentationDataset(
     os.path.join(DATASETS_DIR, CONFIG["validataion_dataset"], "images"),
     os.path.join(DATASETS_DIR, CONFIG["validataion_dataset"], "masks"),
     CONFIG["image_size"],
 )
-val_loader = torch.utils.data.DataLoader(val_ds,**loaders_args)
+val_loader = torch.utils.data.DataLoader(val_ds, **val_loaders_args)
 
 if CONFIG["evaluation_dataset"] and len(CONFIG["evaluation_dataset"]) > 0:
     eval_ds = SegmentationDataset(
@@ -82,7 +88,7 @@ if CONFIG["evaluation_dataset"] and len(CONFIG["evaluation_dataset"]) > 0:
         os.path.join(DATASETS_DIR, CONFIG["evaluation_dataset"], "masks"),
         CONFIG["image_size"],
     )
-    eval_loader = torch.utils.data.DataLoader(eval_ds, **loaders_args)
+    eval_loader = torch.utils.data.DataLoader(eval_ds, **val_loaders_args)
 else:
     eval_ds = None
     eval_loader = None
@@ -113,7 +119,19 @@ print(colored_text("Optimizer and criterion initialized"))
 
 # ===================== Train =================================================================
 
-run_id = tracking.start_run()
+# --- Freeze BatchNorm layers to stabilize training with small batch sizes ---
+
+bn_count = 0
+for _m in model.modules():
+    if isinstance(_m, torch.nn.BatchNorm2d):
+        _m.eval()
+        for _p in _m.parameters():
+            _p.requires_grad = False
+        bn_count += 1
+if bn_count:
+    print(colored_text(f"Frozen {bn_count} BatchNorm modules"))
+
+run_id = tracking.start_run().info.run_id
 tracking.log_params(CONFIG)
 
 trained_model = train(
@@ -132,6 +150,8 @@ trained_model = train(
     scoring_per_epoch=CONFIG["scoring_per_epoch"],
     save_by_metric=CONFIG["save_by_metric"],
 )
+
+tracking.end_run()
 
 print(colored_text("Training completed!\n"))
 

@@ -60,7 +60,6 @@ class CheckpointManager:
         state.checkpoint_counter += 1
         fname = self.root_dir / f"checkpoint_{state.checkpoint_counter}.pth"
         torch.save(model, fname)  # whole model (recommended way)
-        print(colored_text(f"\nCheckpoint saved: {fname}", "green"))
         return fname
 
     # --------------------------------------------------------------------- #
@@ -255,8 +254,8 @@ def train(
                 if save_by_metric and save_by_metric in metrics:
                     if metrics[save_by_metric] > state.best_metric_value:
                         state.best_metric_value = metrics[save_by_metric]
-                        ckpt_mgr.save(model, state)
-                        tqdm.write("Model saved (new best)")
+                        fname = ckpt_mgr.save(model, state)
+                        tqdm.write(f"Checkpoint saved (new best): {fname}")
 
                 _log_metrics(
                     state.total_steps,

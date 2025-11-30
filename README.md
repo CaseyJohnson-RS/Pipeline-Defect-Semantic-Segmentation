@@ -99,9 +99,7 @@ pip install --upgrade pip
   
 
 ```bash
-
 pip install -r requirements.txt
-
 ```
 
   
@@ -115,11 +113,8 @@ pip install -r requirements.txt
   
 
 ```bash
-
 pip uninstall -y torch torchvision torchaudio
-
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-
 ```
 
   
@@ -149,12 +144,9 @@ nvcc --version
 
 ```bash
 
-MLFLOW_TRACKING_URI=http://111.111.111.111:5001
-EXPERIMENT_NAME="Pipeline Defects Detection"
+MLFLOW_TRACKING_URI=http://localhost:5001
 MODELS_DIR=models
 DATASETS_DIR=datasets
-UNET_MODEL_PREFIX=unet_bss_
-UNET_ATTENTION_MODEL_PREFIX=unet_attn_
 USERNAME=Casey
 
 ```

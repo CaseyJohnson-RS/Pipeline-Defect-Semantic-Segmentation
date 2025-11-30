@@ -1,40 +1,43 @@
 seed: 42
 experiment_name: "Pipeline Defects Detection"
-track_experiment: No
+track_experiment: Yes
 
 # --- data & image -------------------------------------------------
 image_size: [704, 512]
-train_dataset: Deformation_EVAL
-validataion_dataset: Deformation_EVAL
-evaluation_dataset: Deformation_EVAL
+train_dataset: Deposition_BASELINE
+validataion_dataset: Deposition_BASELINE_VAL
+evaluation_dataset: Deposition_EVAL
 
+# binary - for strictly binary masks
+# soft - for masks in the form of probability matrices
 validation_metrics: soft
 evaluation_metrics: binary
 
 # --- model --------------------------------------------------------
 model:
-  name: UNetAttention
+  name: UNetAttention # For supported models check src\models\__init__.py
   args:
     encoder_name: resnet34
     encoder_weights: imagenet
     in_channels: 3
     classes: 1
+    freeze_encoder: True
 
 # --- training hyper-parameters ------------------------------------
-epochs: 3
+epochs: 30
 learning_rate: 0.0001
 batch_size: 2
 
-criterion: 
-  name: TverskyLoss
+criterion:
+  name: TverskyLoss # For available loss functions check src/losses/__init__.py
   args:
-    alpha: 0.4   # FN
-    beta: 0.6    # FP
+    alpha: 0.5   # FN
+    beta: 0.5    # FP
     smooth: 1
     mode: binary
     from_logits: True
 
 # --- logging / checkpoints ----------------------------------------
-scoring_per_epoch: 2
-save_by_metric: "IoU"
+scoring_per_epoch: 4
+save_by_metric: IoU
 visualization_samples: 30

@@ -1,15 +1,32 @@
 ## Binary Semantic Segmentation (BSS)
 
 
-В этом эксперименте обучается модель UNet для задачи семантической сегментации фона в канализационных трубах. Так как найти размеченный датасет не удалось, было создано 2 датасета из уже существующего, но предназначенного для задачи детекции 6-ти классов.
+В этом эксперименте обучается модель UNetAttention для задачи семантической сегментации фона в канализационных трубах.
 
-  
-1. **Pipe Box Segmentation (PBS)** - создан с помощью заливки детекционных боксов оригинального датасета. Данных получилось много, но все они низкого качества.
-2. **Pipe Segmentation (PS)** - создан с помощью ручной разметки. Фон и объекты выделены аккуратными контурами, однако размер датасета в 50-100 раз уступает PBS. Легко переобучить модель.
+### Описание датасета
+
+Датасет состоит из изображений и боксов, в которых находятся объекты определённого класса. Классов всего 6:
+
+0. Деформация
+1. Препятствие
+2. Разрыв
+3. Отсоединение
+4. Несоосность
+5. Отложения
+
+Анализ датасета показал, что в нём находится около 200 дубликатов изображений, и есть много изображений, которые могут запутать сеть
+<p align="center">
+  <img src="../../docs/photo_2025-11-30_13-12-15.jpg" width="35%" />
+  <img src="../../docs/photo_2025-11-30_13-12-50.jpg" width="35%" />
+  <br>
+  <i>Странные изображения</i>
+</p>
+
+Так же было замечено, что есть очень схожие классы, например, разрыв очень похож на деформацию, а отсоидинение очень похоже на несоосность. Было решено на время выбросить самые малочисленные классы несоосность и разрыв.
 
 ### Задача
 
-Получить наибольшие метрики IoU и Dice. Напомню их значение и формулы.
+Получить наибольшие метрики IoU и Dice на данных, размеченных руками. Напомню их значение и формулы.
 
 **IoU (или Jaccard Index)**
 
@@ -35,9 +52,6 @@ $$
 Dice = \frac{2 \times |Prediction \cap GroundTruth|}{|Prediction| + |GroundTruth|}
 $$
 
-#### Проблема
-
-В нашем проекте есть небольшая проблема. Наши маски являются недостаточно информативными. Они только указывают возможное нахождение объекта, но не абсолютно точное, поэтому метрики IoU и Dice бесполезными при валидации. Опорной метрикой для оценки в течении обучения будет Recall.
 
 ### Конфигурация эксперимента
 
@@ -58,9 +72,10 @@ datasets/
 |   |-- labels.csv
 ```
 
-Запускаем скрипт `scripts/tools/preprocess_dataset.py` (указываем имя скачанного датасета). В директории `datasets/` появятся еще два датаета:
+Запускаем скрипт `scripts/tools/preprocess_dataset.py` (указываем имя скачанного датасета). В директории `datasets/` появятся еще три датасета:
  - <dataset_name>_BASELINE - маленький датасет для обучения baseline модели
- - <dataset_name>_EVAL - датасет для оценки модели
+ - <dataset_name>_VAL - датасет для оценки baseline модели
+ - <dataset_name>_EVAL - датасет для оценки всех моделей
 
 Базовая конфигурация завершена.
 
@@ -83,31 +98,47 @@ datasets/
 
 ```yaml
 seed: 42
+experiment_name: "Pipeline Defects Detection"
+track_experiment: Yes
 
-epochs: 1
-learning_rate: 0.0001
-batch_size: 2
-criterion: 
-  name: TverskyLoss
-  args:
-    alpha: 0.1
-    beta: 0.9
-    smooth: 1
-    mode: binary
-    from_logits: True
-
-train_dataset: <dataset_name>_BASELINE # Замените на своё
-evaluation_dataset: <dataset_name>_EVAL # Замените на своё
+# --- data & image -------------------------------------------------
 image_size: [704, 512]
+train_dataset: Deposition_BASELINE
+validataion_dataset: Deposition_BASELINE_VAL
+evaluation_dataset: Deposition_EVAL
+
+# binary - for strictly binary masks
+# soft - for masks in the form of probability matrices
+validation_metrics: soft
+evaluation_metrics: binary
+
+# --- model --------------------------------------------------------
 model:
-  name: UNetAttention
+  name: UNetAttention # For supported models check src\models\__init__.py
   args:
     encoder_name: resnet34
     encoder_weights: imagenet
     in_channels: 3
     classes: 1
+    freeze_encoder: True
 
-val_per_epoch: 1
+# --- training hyper-parameters ------------------------------------
+epochs: 30
+learning_rate: 0.0001
+batch_size: 2
+
+criterion:
+  name: TverskyLoss # For available loss functions check src/losses/__init__.py
+  args:
+    alpha: 0.5   # FN
+    beta: 0.5    # FP
+    smooth: 1
+    mode: binary
+    from_logits: True
+
+# --- logging / checkpoints ----------------------------------------
+scoring_per_epoch: 4
+save_by_metric: IoU
 visualization_samples: 30
 ```
 
