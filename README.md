@@ -181,6 +181,6 @@ USERNAME=Casey
 | Деформация   | 0.4411   | 0.4752 | <span style="color: green">0.0341</span>   | <span style="color: green">3.41</span>         |
 | Отсоединение | 0.4755   | 0.5162 | <span style="color: green">0.0407</span>   | <span style="color: green">4.07</span>         |
 | Отложения    | 0.7495   | 0.7447 | <span style="color: red">-0.0048</span>  | <span style="color: red">-0.48</span>        |
-| Препятствие  | 0.4741   | 0.5458 | <span style="color: green">0.0717</span>0.0717   | <span style="color: green">7.17</span>         |
+| Препятствие  | 0.4741   | 0.5458 | <span style="color: green">0.0717</span>   | <span style="color: green">7.17</span>         |
 
 Видно, что был получен прирост метрики, однако незначительный, а в каком-то случае даже ухудшение качества. Это произошло, предположительно, из-за нестабильности датасета. 
